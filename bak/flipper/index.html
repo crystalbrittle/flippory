@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title> f l i p p p p e r </title>
+
+  <meta property='og:image' content='http://semidigested.org/flipper/resources/flipperImage.jpg'/>
+  <meta name="title" content=" f l i p p p p e r " />
+  <meta name="description" content='The ALL NEW Wizard Master image leadership software, codenamed "Flipper"!' />
+  <link rel="image_src" type="image/jpeg" href="resources/flipperImage.jpg"/>
+
+
+  <script
+    src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js">
+  </script>
+  <script src="flipper.js"></script>
+</head>
+
+<!-- 
+////////    *   *  * * *  *   *  *
+////////    *   *    *    ** **  *
+////////    * * *    *    * * *  *
+////////    *   *    *    *   *  *
+////////    *   *    *    *   *  * * *
+-->
+<body>
+
+
+  <div id="content"></div>
+
+  <input type="file" id="openFile" size="60"/>
+  <div id="ui">
+    <div id="menu">
+      <div id="closeImport"></div>
+      <div id="importui">
+        <input type="text" placeholder="enter a URL to an image here"/><button id="load">Load</button> or <button id="browse">Browse...</button>
+      </div>
+      <!-- <div id="import" class="menuItem" title="Import (B)rowse or (U)RL"></div> -->
+      <div id="import" class="menuItem" title="Import (I)"></div>
+      <div id="undo" class="menuItem" title="Undo (Z)"></div>
+      <div id="crop" class="menuItem" title="Crop (C)"></div>
+      <div id="rotate" class="menuItem" title="Rotate (R)"></div>
+      <a id="export" class="menuItem" target="new" title="Export..."></a>
+    </div>
+  </div>
+
+  <div id="trace"></div>
+
+  <div id="debug1"></div><div id="debug2"></div>
+</body>
+
+<!-- 
+////////      * *    * *    * *
+////////    *      *      *    
+////////    *      * * *  * * *
+////////    *          *      *
+////////      * *  * *    * *  
+-->
+
+<style type="text/css" title="">
+
+
+.Display{
+  position:fixed;
+  right:0; top:0;
+  pointer-events:none;
+  z-index:1001;
+}
+
+#debug1{
+  position:fixed;
+  top:0;left:0;
+  width:30px; height:30px;
+  border-left:1px solid red;
+  border-top:1px solid red;
+  z-index:1000;
+  pointer-events:none;
+  display:none;
+}
+#debug2{
+  position:fixed;
+  top:0;left:0;
+  width:30px; height:30px;
+  border-left:1px solid green;
+  border-top:1px solid green;
+  z-index:1000;
+  pointer-events:none;
+  display:none;
+}
+
+
+canvas,img{
+  vertical-align:bottom;
+  margin:0;
+}
+
+div{
+  -webkit-user-select: none; -moz-user-select: none;
+  -ms-user-select: none; -o-user-select: none; user-select: none;        
+}
+
+body{
+  position:absolute;
+  top:0; bottom:0; left:0; right:0;
+  margin:0; padding:0;
+  font:14px helvetica,sans-serif;
+  background:#282828 url("backgroundTexture.png") repeat;
+  text-align:center;
+  cursor:default;
+  overflow:hidden;
+  color:black;
+}
+
+/* UI & menu */
+
+#ui{
+  position:fixed;
+  z-index:100;
+  left:0px; top:0;
+  padding:0px;
+  background:rgba(0,0,0,0); /* ie hack */
+}
+
+#menu{
+  position: fixed;
+  top: 0; padding-top: 1px;
+  background:#222;
+  box-shadow:0 0 16px 5px rgba(0, 0, 0, 0.5);
+  cursor: default;
+}
+.menuItem{
+  position:relative;
+  width:46px;
+  height:46px;
+  cursor:pointer;
+  font-weight:normal;
+  display:block;
+  background-color:#343c40;
+  border:2px solid #222;
+  border-width:1px 2px 1px 2px;
+  outline:none;
+}
+.menuItem#import{
+  background-image:url("resources/menu_import.png");
+}
+.menuItem#export{
+  background-image:url("resources/menu_export.png");
+}
+.menuItem#crop{
+  background-image:url("resources/menu_crop.png");
+}
+.menuItem#undo{
+  background-image:url("resources/menu_undo.png");
+}
+.menuItem#rotate{
+  background-image:url("resources/menu_rotate.png");
+}
+
+.shiftKey .menuItem#rotate{
+  background-image:url("resources/menu_rotate_rev.png");
+}
+
+.menuItem.disabled{
+  opacity:.35;
+  cursor:default;
+}
+.menuItem.disabled:hover{
+  background-color:#343c40;
+}
+.menuItem:hover,
+.menuItem.hover{
+  background-color:#4c565a;
+}
+.menuItem:active{
+  background-color:#ff0;
+  background-color:#66e1ff;
+}
+.menuItem > i{
+  font-style:normal;
+  font-weight:normal;
+  margin-left:40px;
+  position:absolute;
+  right:16px;
+}
+#openFile{
+  width:0; height:0;
+  visibility:hidden;
+}
+body.crop .menuItem#crop{
+  background-color:#ff0;
+  background-color:#66e1ff;
+  color:#222;
+}
+
+#importui{
+  position: absolute;
+  top: 2px; left: 50px; left: -700px; 
+  height: 46px;
+  line-height: 46px;
+  background: none repeat scroll 0 0 #eee;
+  padding: 0 5px;
+  text-align: left;
+  /*border-left: 3px solid #ddd;*/
+  border-radius: 0 2px 2px 0;
+  white-space: nowrap;
+  box-shadow:0 0 16px 5px rgba(0, 0, 0, 0.5);
+  z-index:0;
+}
+#menu.importOpen > #import{
+  background-color:#eee;
+}
+#closeImport{
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom:0;
+  width:100%; height:100%;
+  background:rgba(44, 44, 44, 0.75);
+  z-index:-1;
+  display:none;
+}
+#importui > input{
+  width: 500px;
+  margin-left: 5px;
+  margin-right: -0.5em;
+}
+#importui > button{
+  margin: 5px;
+}
+/* App */
+
+#content{
+  position:fixed;
+  top:0; bottom:0; left:0; right:0;
+  width:100%; height:100%;
+  overflow:hidden;
+  display:table;
+  z-index:0;
+}
+.Flipper{
+  display:table-cell;
+  vertical-align:middle;
+}
+
+/* crosshairs */
+
+.crosshairs{
+  position:absolute;
+  opacity:.95;
+  pointer-events:none;
+  border-color:#ff0;
+  background:#440;
+  border-style:dashed;
+  border-width:0;
+  z-index:99;
+
+  border-color:#fff;
+  background:#000;
+  opacity:.75;
+
+  /*border-color:#0cd;
+  border-style:solid;*/
+  opacity:1;
+  background-color:rgba(39,39,39, .4);
+  background-color:rgba(39,39,39, .7);
+}
+body.crop .crosshairs{
+  /* ... 
+  background-color:transparent;
+  border-color:#0cd;
+  border-style:solid;
+  box-shadow:0 0 2px 2px rgba(0, 0, 0, 0.2);*/
+}
+body.crop #xLine{
+  width:0;
+}
+body.crop #yLine{
+  height:0;
+}
+#xLine{
+  border-left-width:1px;
+  top:0; bottom:0; height:100%;
+  width:0;
+  width:100%;
+}
+#yLine{
+  border-top-width:1px;
+  left:0; right:0; width:100%;
+  height:0;
+  height:100%;
+}
+#xLine:active,#yLine:active{
+  border-style:solid;
+}
+body.left #yLine,
+body.top #xLine,
+body.none #xLine,
+body.none #yLine,
+body.ui #xLine,
+body.ui #yLine,
+body.cropping #xLine,
+body.cropping #yLine{
+  /*display:none;*/
+  visibility:hidden;
+}
+body.left{
+  cursor:e-resize;
+  cursor:none;
+}
+body.top{
+  cursor:s-resize;
+  cursor:none;
+}
+
+
+/* cursors 26x18 */
+
+.lineCursor{
+  visibility:hidden;
+  position:fixed;
+  background-color:#BDC4C7;
+  /*box-shadow:0 0 10px 2px rgba(0, 0, 0, 0.3);
+  box-shadow:0 0 5px 0px rgba(0, 0, 0, 0.4);*/
+  z-index:100;
+  pointer-events:none;
+}
+#xLineCursor{
+  width:26px; height:18px;
+  left:calc(50% - 13px);
+  top:calc(50% - 9px);
+  background:#eee url(resources/cursor_reflect_l.png) no-repeat center;
+  border-radius:0 12px 12px 0;
+}
+#yLineCursor{
+  left:calc(50% - 9px);
+  top:calc(50% - 13px);
+  width:18px; height:26px;
+  background:#eee url(resources/cursor_reflect_t.png) no-repeat center;
+  border-radius:0 0 12px 12px;
+}
+body.left #xLineCursor,
+body.top #yLineCursor{
+  visibility:visible;
+}
+body.ui.left #xLineCursor,
+body.ui.top #yLineCursor{
+  visibility:hidden;
+}
+
+/* centerLine */
+
+.centerLine{
+  position:absolute;
+  opacity:.2;
+  pointer-events:none;
+  border-style:dotted;
+  border-width:0;
+  z-index:98;
+  border-color:#fff;
+  background:#000;
+
+  visibility:hidden;
+}
+#xCenter{
+  border-left-width:1px;
+  top:0; bottom:0; height:100%;
+  left:50%;
+  width:0;
+}
+#yCenter{
+  border-top-width:1px;
+  left:0; right:0; width:100%;
+  top:50%;
+  height:0;
+}
+body.left #yCenter,
+body.top #xCenter{
+  visibility:hidden;
+}
+
+
+.Flipper > canvas{
+  box-shadow:0 0 20px 10px rgba(0, 0, 0, 0.3);
+  border:0px solid rgba(255,255,255,.005);
+}
+
+/* touch */
+body.touch #center,
+body.touch #bar,
+body.touch #bar2{
+  opacity:1;
+}
+body.touch{
+}
+
+/* debug */
+#trace{
+  position:fixed;
+  right:0; top:0;
+  width:300px;
+  z-index:100;
+  background:#444;
+  padding:0;
+  border-left:3px solid #666;
+  max-height:100%;
+  overflow-y:auto;
+}
+#trace > div{
+  padding-left:5px;
+  color:white;
+  text-align:left;
+  font-family:monospace;
+  border-bottom:1px solid #555;
+}
+
+</style>
+
+</html>
