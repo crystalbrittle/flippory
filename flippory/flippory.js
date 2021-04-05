@@ -222,7 +222,10 @@ App.init = function(){
   // ~ ~ ~ ~ ~ ~ ~keys
 
   $(window).keydown(function(event){
-    if(event.which==16) App.shiftKey = !App.shiftKey; //event.shiftKey;
+    // can be confusing to have this toggle
+    ///if(event.which==16) App.shiftKey = !App.shiftKey;
+    if(event.which==16) App.shiftKey = event.shiftKey;
+
     App.ctrlKey = event.ctrlKey||event.metaKey;
     $(document.body).toggleClass("shiftKey",App.shiftKey);
     ///App.checkAutomated(App.shiftKey);
@@ -230,7 +233,8 @@ App.init = function(){
   }.bind(this));
 
   $(window).keyup(function(event){
-    //if(event.which==16) App.shiftKey = event.shiftKey;
+    if(event.which==16) App.shiftKey = event.shiftKey;
+    
     App.ctrlKey = event.ctrlKey||event.metaKey;
 
     $(document.body).toggleClass("shiftKey",App.shiftKey);
