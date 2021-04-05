@@ -54,6 +54,14 @@
       <div id="rotate" class="menuItem" title="Rotate (R)"></div>
       <div id="auto" class="menuItem" title="Automate (A)"></div>
       <a id="export" class="menuItem" target="new" title="Export..."></a>
+
+      <div id="help" class="small menuItem" title="Help (H)"></div>
+      <div id="shift" class="small menuItem" title="Shift (Shift)"></div>
+    </div>
+    <div id="instructions">
+      <p>
+Import an image (press "i") and then click on the image to create a flipped reflection of either the left or the top. To create a flip of the right or bottom, just rotate (press "r") the image first. You can crop the image by pressing "c" and drag-selecting a rectangle. You can undo by pressing the "z" key. Use the Automate function (press "a") to do all of this for you.
+      </p>
     </div>
   </div>
 
@@ -62,7 +70,7 @@
   <div id="debug1"></div><div id="debug2"></div>
 </body>
 
-<!-- 
+<!-- #
 ////////      * *    * *    * *
 ////////    *      *      *    
 ////////    *      * * *  * * *
@@ -155,6 +163,26 @@ body{
   border-color: transparent;
   background-color: #f9f9f5;
 }
+.small.menuItem{
+  width: 22px;
+  height: 22px;
+  display: inline-block;
+}
+.menuItem:active {
+  background-position: 2px 2px;
+}
+
+.menuItem#help{
+  background-image:url("resources/menu_help.png");
+}
+.menuItem#shift{
+  background-image:url("resources/menu_shift.png");
+  margin-left: -5px;
+}
+.shiftKey .menuItem#shift{
+  background-color:#66e1ff;
+}
+
 .menuItem#auto{
   background-image:url("resources/menu_auto.png");
 }
@@ -212,6 +240,30 @@ body{
   position:absolute;
   right:16px;
 }
+
+
+#instructions{
+  display: none;
+}
+.help #instructions {
+  display: block;
+  background: #eee;
+  width: 40%;
+  padding: 1em 2em;
+  text-align: left;
+  margin: auto;
+  position: fixed;
+  left: 30%;
+  box-sizing: border-box;
+  font-size: 12pt;
+  margin-top: 2em;
+  box-shadow: 0 0 10px #000;
+  border-radius: 2px;
+}
+.help #help {
+  background-color: #66e1ff;
+}
+
 #openFile{
   width:0; height:0;
   visibility:hidden;

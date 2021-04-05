@@ -198,6 +198,18 @@ App.init = function(){
     App.export();
   });
 
+  // shift
+  $("#shift").on("click", function(){
+    App.shiftKey = !App.shiftKey;
+    $(document.body).toggleClass("shiftKey",App.shiftKey);
+    App.updateMenu();
+  });
+  // help
+  $("#help").on("click", function(){
+    $(document.body).toggleClass("help");
+    App.updateMenu();
+  });
+
   App._menuH = $("#menu").outerHeight();
   $("#ui").on("mouseenter", function(){
     App.showMenu(true);
@@ -207,9 +219,10 @@ App.init = function(){
   });
   App.showMenu(false,0);
 
-  // ~ ~ ~ ~ ~ ~ keys
+  // ~ ~ ~ ~ ~ ~ ~keys
+
   $(window).keydown(function(event){
-    App.shiftKey = event.shiftKey;
+    if(event.which==16) App.shiftKey = !App.shiftKey; //event.shiftKey;
     App.ctrlKey = event.ctrlKey||event.metaKey;
     $(document.body).toggleClass("shiftKey",App.shiftKey);
     ///App.checkAutomated(App.shiftKey);
@@ -217,7 +230,7 @@ App.init = function(){
   }.bind(this));
 
   $(window).keyup(function(event){
-    App.shiftKey = event.shiftKey;
+    //if(event.which==16) App.shiftKey = event.shiftKey;
     App.ctrlKey = event.ctrlKey||event.metaKey;
 
     $(document.body).toggleClass("shiftKey",App.shiftKey);
@@ -230,7 +243,7 @@ App.init = function(){
     event.stopPropagation();
     // z
     if(key == 90){
-      App.undo(App.shiftKey);
+      $("#undo").trigger( "click" );
     }
 
     // SECURITY issue:
@@ -244,17 +257,24 @@ App.init = function(){
     ///}
     // i 
     if(key == 73){
-      App.browse();
+      $("#browse").trigger( "click" );
+      ///App.browse();
     }
     // // // // //
 
     // c
     if(key == 67){
-      App.crop();
+      $("#crop").trigger( "click" );
+      ///App.crop();
     }
     // r
     if(key == 82 && !App.ctrlKey){
-      App.rotate();
+      $("#rotate").trigger( "click" );
+      ///App.rotate();
+    }
+    // a
+    if(key == 65 && !App.ctrlKey){
+      $("#auto").trigger( "click" );
     }
     // esc
     if(event.keyCode == 27){
@@ -1219,11 +1239,10 @@ App.auto = function(){
 
   var STEPS = Math.max(3,rnd(5)+rnd(5)+rnd(5)); // 5 10
 
-STEPS = 2; // DEBUG REMOVE
 
-  trace.verbose=true;
-  trace(STEPS+" STEPS");
-  trace.verbose=!true;
+  ///trace.verbose=true;
+  ///trace(STEPS+" STEPS");
+  ///trace.verbose=!true;
 
   var canvas = App.flipper.canvas;
   var orgW = canvas.width;
@@ -1245,6 +1264,10 @@ STEPS = 2; // DEBUG REMOVE
       App.setMode("none");
     }, t);
   }
+
+  App.auto.setTimeout(function(){
+    App.history.push( "automated-end" );
+  }, t);
 
 };
 
