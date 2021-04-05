@@ -571,8 +571,8 @@ App.reflect = function(mode, offset){
 //----------------------------------------------------- 
 App.fitImage = function(){
   var $canvas = $(App.flipper.canvas);
-  var W = $(window).width();
-  var H = $(window).height();
+  var W = $(".Flipper").width();
+  var H = $(".Flipper").height();
   var w = App.flipper.canvas.width;
   var h = App.flipper.canvas.height;
 
@@ -582,9 +582,21 @@ App.fitImage = function(){
   else $canvas.css({width:"auto"});
   if(h > H) $canvas.css({height:h * App.zoom});
   else $canvas.css({height:"auto"});
-
-
 }
+///App.fitImage = function(){
+///  var $canvas = $(App.flipper.canvas);
+///  var W = $(window).width();
+///  var H = $(window).height();
+///  var w = App.flipper.canvas.width;
+///  var h = App.flipper.canvas.height;
+///
+///  App.zoom = Math.min( 1,Math.min(H/h,W/w) );
+///
+///  if(w > W) $canvas.css({width:w * App.zoom});
+///  else $canvas.css({width:"auto"});
+///  if(h > H) $canvas.css({height:h * App.zoom});
+///  else $canvas.css({height:"auto"});
+///}
 //----------------------------------------------------- _onMouseMove
 App._onMouseMove = function(){
   // ~ ~ ~ crop
