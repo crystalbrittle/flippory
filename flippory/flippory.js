@@ -179,7 +179,7 @@ App.init = function(){
   });
   // undo
   $("#undo").on("click", function(){
-    App.undo();
+    App.undo(App.shiftKey);
   });
   // crop
   $("#crop").on("click", function(){
@@ -188,6 +188,10 @@ App.init = function(){
   // rotate
   $("#rotate").on("click", function(){
     App.rotate();
+  });
+  // automate
+  $("#auto").on("click", function(){
+    App.auto();
   });
   // export
   $("#export").on("click", function(){
@@ -208,6 +212,8 @@ App.init = function(){
     App.shiftKey = event.shiftKey;
     App.ctrlKey = event.ctrlKey||event.metaKey;
     $(document.body).toggleClass("shiftKey",App.shiftKey);
+    ///App.checkAutomated(App.shiftKey);
+    App.updateMenu();
   }.bind(this));
 
   $(window).keyup(function(event){
@@ -216,11 +222,15 @@ App.init = function(){
 
     $(document.body).toggleClass("shiftKey",App.shiftKey);
 
+    ///App.checkAutomated(App.shiftKey);
+
+    App.updateMenu();
+
     var key = event.which;
     event.stopPropagation();
     // z
     if(key == 90){
-      App.undo();
+      App.undo(App.shiftKey);
     }
 
     // SECURITY issue:
@@ -353,15 +363,40 @@ App.export = function(){
   if(App.history.length<2) return;
   var dataURL = App.flipper.canvas.toDataURL("image/png");
   $("#export").attr("href",dataURL);
-  $("#export").attr("download","flipperImage.png");
+
+  /// // subtract ms since 2020 from date now
+  /// var d = (new Date("2020-01-01")).getTime();
+  /// //2000=946684800000  2020=1577836800000
+  // seconds since 2020-01-01
+  var d = (Math.round((Date.now()-1577836800000)/1000))
+          .toString(36).toUpperCase();
+  var a = App.automated?"a":"";
+  var fileName = "flippory"+d+a+".png";
+  $("#export").attr("download",fileName);
 }
 //----------------------------------------------------- 
-App.undo = function(){
+App.undo = function(automated){
   if(this.history.length<2) return;
-  this.history.pop();
+  if(automated){
+    // step back to last "automated"
+    var i = this.history.lastIndexOf("automated");
+    if(i==-1) return;
+    this.history = this.history.slice(0,i);
+    i = this.history.lastIndexOf("automated");
+    if(i==-1){
+      App.automated = false;
+      $("body").toggleClass("automated", App.automated);
+    }
+  }
+  else{
+    this.history.pop();
+  }
   this.replay();
   App.updateMenu();
-}
+};
+///App.checkAutomated = function(shiftKey){
+///  return this.history.lastIndexOf("automated") != -1;
+///};
 //----------------------------------------------------- 
 App.crop = function(){
   App.setMode("crop");
@@ -413,9 +448,11 @@ App.replay = function(){
 }
 //----------------------------------------------------- 
 App.updateMenu = function(){
-  var hasHistory = (this.history.length>1);
-  $("#undo").toggleClass("disabled",!hasHistory);
-  $("#export").toggleClass("disabled",!hasHistory);
+  var noHistory = (this.history.length<2);
+  var noAuto = this.history.lastIndexOf("automated") == -1;
+  var undoDisabled = noHistory || (App.shiftKey && noAuto);
+  $("#undo").toggleClass("disabled", undoDisabled );
+  $("#export").toggleClass("disabled", noHistory);
 }
 //----------------------------------------------------- 
 App.showMenu = function(state, speed){
@@ -505,8 +542,10 @@ App.onMouseUp = function(event){
 
   App.flipping = false;
 };
+//----------------------------------------------------- 
 App.reflect = function(mode, offset){
-  App.flipper.reflect(mode, offset);
+  offset = Math.round(offset);
+  App.flipper.reflect(mode, offset );
   App.history.push( {fn:"reflect", params:[mode, offset]} );
 };
 //----------------------------------------------------- 
@@ -822,6 +861,10 @@ Flipper.prototype.copy = function(from, to){
 }
 //----------------------------------------------------- 
 Flipper.prototype.crop = function(x1,y1,x2,y2){
+  x1 = Math.round(x1);
+  x2 = Math.round(x2);
+  y1 = Math.round(y1);
+  y2 = Math.round(y2);
   trace("crop "+[x1,y1,x2,y2]);
   var temp;
   if(x1>x2){
@@ -1119,7 +1162,25 @@ CanvasRenderingContext2D.prototype.drawLine = function(x1, y1, x2, y2, dashLen, 
 
 
 
-
+App.printHistory = function(){
+  var out = "";
+  for(var i=0, len=App.history.length; i<len; i++){
+    var item = App.history[i];
+    if(typeof item == "object"){
+      if(item.fn == "import"){
+        out += "import " + item.params[0].substr(0,55) + "...";
+      }
+      else{
+        out += item.fn + " " + item.params.join(",");
+      }
+    }
+    else{
+      out += item
+    }
+    out += "\n";
+  }
+  return out;
+};
 
 //     * *    *     *  * * * *  * * * *  
 //    *   *   *     *     *     *     *  
@@ -1128,7 +1189,7 @@ CanvasRenderingContext2D.prototype.drawLine = function(x1, y1, x2, y2, dashLen, 
 //   *     *  * * * *     *     * * * *  
 
 
-//= = = = = = = = = = = = = = = = = = = = = = = = = = = 
+//= = = = = = = = = = = = = = = = = = = = = = = = = = = ~auto
 ///App.auto = function(){
 ///  App.history.push( {fn:"auto", params:[]} );
 ///
@@ -1151,9 +1212,18 @@ CanvasRenderingContext2D.prototype.drawLine = function(x1, y1, x2, y2, dashLen, 
 ///  App.setMode("none");
 ///};
 App.auto = function(){
-  ///App.history.push( {fn:"auto", params:[]} );
+  App.history.push( "automated" );
 
-  var STEPS = 5; // 5 10
+  App.automated = true;
+  $("body").toggleClass("automated", App.automated);
+
+  var STEPS = Math.max(3,rnd(5)+rnd(5)+rnd(5)); // 5 10
+
+STEPS = 2; // DEBUG REMOVE
+
+  trace.verbose=true;
+  trace(STEPS+" STEPS");
+  trace.verbose=!true;
 
   var canvas = App.flipper.canvas;
   var orgW = canvas.width;

@@ -52,6 +52,7 @@
       <div id="undo" class="menuItem" title="Undo (Z)"></div>
       <div id="crop" class="menuItem" title="Crop (C)"></div>
       <div id="rotate" class="menuItem" title="Rotate (R)"></div>
+      <div id="auto" class="menuItem" title="Automate (A)"></div>
       <a id="export" class="menuItem" target="new" title="Export..."></a>
     </div>
   </div>
@@ -136,7 +137,7 @@ body{
 #menu{
   position: fixed;
   top: 0; padding-top: 1px;
-  background:#222;
+  background:#f9f9f5;
   box-shadow:0 0 16px 5px rgba(0, 0, 0, 0.5);
   cursor: default;
 }
@@ -151,6 +152,11 @@ body{
   border:2px solid #222;
   border-width:1px 2px 1px 2px;
   outline:none;
+  border-color: transparent;
+  background-color: #f9f9f5;
+}
+.menuItem#auto{
+  background-image:url("resources/menu_auto.png");
 }
 .menuItem#import{
   background-image:url("resources/menu_import.png");
@@ -161,31 +167,43 @@ body{
 .menuItem#crop{
   background-image:url("resources/menu_crop.png");
 }
+
 .menuItem#undo{
   background-image:url("resources/menu_undo.png");
 }
+/*# shift key down but no automated in history, look "disabled"  */
+.shiftKey .menuItem#undo:hover,
+.shiftKey .menuItem#undo{
+  background-image:url("resources/menu_undo_auto.png");
+/*  opacity:.3;
+  cursor:default;
+  background-color: unset;
+*/}
+.shiftKey.automated .menuItem#undo{
+  background-image:url("resources/menu_undo_auto.png");
+}
+
+
 .menuItem#rotate{
   background-image:url("resources/menu_rotate.png");
 }
-
 .shiftKey .menuItem#rotate{
   background-image:url("resources/menu_rotate_rev.png");
 }
 
 .menuItem.disabled{
-  opacity:.35;
+  opacity:.3;
   cursor:default;
 }
 .menuItem.disabled:hover{
-  background-color:#343c40;
+  background-color:#f9f9f5;
 }
 .menuItem:hover,
 .menuItem.hover{
-  background-color:#4c565a;
+  background-color: #fff555;
 }
 .menuItem:active{
-  background-color:#ff0;
-  background-color:#66e1ff;
+  background-color:#fff555;
 }
 .menuItem > i{
   font-style:normal;
