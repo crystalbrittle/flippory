@@ -304,6 +304,15 @@ App.init = function(){
   App.updateMenu();
 
 }
+
+App.shift = function(state){
+  if(state === App.shiftKey) return;
+  App.shiftKey = state;
+  $(document.body).toggleClass("shiftKey", App.shiftKey);
+  App.updateMenu();
+};
+
+
 //----------------------------------------------------- 
 App._onLoad = function(url, callback){
   App.storage("lastURL", url);
@@ -518,6 +527,7 @@ App.onMouseDown = function(event){
   }
   else if(App.mode=="left" || App.mode=="top"){
     App.flipping = true;
+    App.shift(false);
   }
 
 }
