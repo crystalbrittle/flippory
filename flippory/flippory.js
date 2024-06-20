@@ -93,17 +93,6 @@ App.init = function(){
 
   this.flipper = new Flipper().attach( $("#content")[0] );
 
-  // mousemove
-  $(window).on("pointermove", throttle( function(e){
-    let event = e.originalEvent||e;
-    ///if(event.pageX != mouseX && event.pageY != mouseY){ // stutters
-      mouseX = event.pageX;
-      mouseY = event.pageY;
-      App._onMouseMove();
-      App.update();
-    ///}
-  }, 10));
-
   // resize
   $(window).on("resize", function(){
     App.update();
@@ -119,12 +108,37 @@ App.init = function(){
   $(window).on("resize", resizeOverlay);
   resizeOverlay();
 
+
   // hack to make it work (poorly) on touch devices
   if(App.TOUCH_DEVICE){
-    $(window).on("mousedown", App.onMouseDown.bind(this) );
-    $(window).on("mouseup", App.onMouseUp.bind(this) );
+    // mousemove
+    $(window).on("pointermove", throttle( function(e){
+      let event = e.originalEvent||e;
+      ///if(event.pageX != mouseX && event.pageY != mouseY){ // stutters
+        mouseX = event.pageX;
+        mouseY = event.pageY;
+        App._onMouseMove();
+        App.update();
+      ///}
+    }, 10));
+    $(content).on("pointerdown", App.onMouseDown.bind(this) );
+    $(content).on("pointerup", App.onMouseUp.bind(this) );
+    //$(window).on("mousedown", App.onMouseDown.bind(this) );
+    //$(window).on("mouseup", App.onMouseUp.bind(this) );
+    ///$(window).on("touchstart", App.onMouseDown.bind(this) );
+    ///$(window).on("touchend", App.onMouseUp.bind(this) );
   }
   else{
+    // mousemove
+    $(window).on("pointermove", throttle( function(e){
+      let event = e.originalEvent||e;
+      ///if(event.pageX != mouseX && event.pageY != mouseY){ // stutters
+        mouseX = event.pageX;
+        mouseY = event.pageY;
+        App._onMouseMove();
+        App.update();
+      ///}
+    }, 10));
     $(window).on("pointerdown", App.onMouseDown.bind(this) );
     $(window).on("pointerup", App.onMouseUp.bind(this) );
   }
@@ -517,7 +531,7 @@ App.showMenu = function(state, speed){
 App.onMouseDown = function(event){
   App.flipping = false;
 
-  // only left click
+  // only left click - why?
   if(event.which != 1) return;
 
   let e = event.originalEvent||event;
@@ -541,6 +555,7 @@ App.onMouseDown = function(event){
       App._updateCropRect("begin");
     }
   }
+  // needed for NON- App.TOUCH_DEVICE 
   else if(App.mode=="left" || App.mode=="top"){
     App.flipping = true;
     App.shift(false);
@@ -665,6 +680,12 @@ App._onMouseMove = function(){
           var D = dir;
           dir = dir=="left"||dir=="right"?"left":"top";
           App.setMode(dir);
+
+          // for App.TOUCH_DEVICE
+          if(App.mode=="left" || App.mode=="top"){
+            App.flipping = true;
+            App.shift(false);
+          }
         }
       }
     }
