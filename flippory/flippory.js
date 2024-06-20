@@ -94,13 +94,14 @@ App.init = function(){
   this.flipper = new Flipper().attach( $("#content")[0] );
 
   // mousemove
-  $(window).on("mousemove", throttle( function(event){
-    if(event.mouseX != mouseX && event.mouseY != mouseY){
+  $(window).on("pointermove", throttle( function(e){
+    let event = e.originalEvent||e;
+    ///if(event.pageX != mouseX && event.pageY != mouseY){ // stutters
       mouseX = event.pageX;
       mouseY = event.pageY;
       App._onMouseMove();
       App.update();
-    }
+    ///}
   }, 10));
 
   // resize
@@ -118,19 +119,26 @@ App.init = function(){
   $(window).on("resize", resizeOverlay);
   resizeOverlay();
 
-  // clicks (currently always mouseup)
-  $(window).on("mousedown", App.onMouseDown.bind(this) );
-  $(window).on("mouseup", App.onMouseUp.bind(this) );
+  // hack to make it work (poorly) on touch devices
+  if(App.TOUCH_DEVICE){
+    $(window).on("mousedown", App.onMouseDown.bind(this) );
+    $(window).on("mouseup", App.onMouseUp.bind(this) );
+  }
+  else{
+    $(window).on("pointerdown", App.onMouseDown.bind(this) );
+    $(window).on("pointerup", App.onMouseUp.bind(this) );
+  }
+  
 
   ///if(1||App.TOUCH_DEVICE){
-  ///  $(content).on("mouseup", App.onMouseUp.bind(this) );
-  ///  $(this.xLine).on("mouseup", App.onMouseUp.bind(this) );
-  ///  $(this.yLine).on("mouseup", App.onMouseUp.bind(this) );
+  ///  $(content).on("pointerup", App.onMouseUp.bind(this) );
+  ///  $(this.xLine).on("pointerup", App.onMouseUp.bind(this) );
+  ///  $(this.yLine).on("pointerup", App.onMouseUp.bind(this) );
   ///}
   ///else{
-  ///  $(content).on("mousedown", App.onMouseUp.bind(this) );
-  ///  $(this.xLine).on("mousedown", App.onMouseUp.bind(this) );
-  ///  $(this.yLine).on("mousedown", App.onMouseUp.bind(this) );
+  ///  $(content).on("pointerdown", App.onMouseUp.bind(this) );
+  ///  $(this.xLine).on("pointerdown", App.onMouseUp.bind(this) );
+  ///  $(this.yLine).on("pointerdown", App.onMouseUp.bind(this) );
   ///}
 
   var lastURL = App.storage("lastURL");
@@ -142,21 +150,21 @@ App.init = function(){
   App.setMode("left");
 
   // ui
-  $("#ui,.menuItem").on("mouseenter", function(){
+  $("#ui,.menuItem").on("pointerenter", function(){
     $("body").addClass("ui");
   });
-  $("#ui,.menuItem").on("mouseleave", function(){
+  $("#ui,.menuItem").on("pointerleave", function(){
     $("body").removeClass("ui");
   });
 
-  $("#ui").on("mousedown", function(event){
+  $("#ui").on("pointerdown", function(event){
     event.stopPropagation();
   });
-  $("#ui").on("mouseup", function(event){
+  $("#ui").on("pointerup", function(event){
     event.stopPropagation();
     App.flipping = false;
   });
-  $("#closeImport").on("mousedown", function(event){
+  $("#closeImport").on("pointerdown", function(event){
     event.stopPropagation();
     App.showImport(false);
   });
@@ -211,10 +219,10 @@ App.init = function(){
   });
 
   App._menuH = $("#menu").outerHeight();
-  $("#ui").on("mouseenter", function(){
+  $("#ui").on("pointerenter", function(){
     App.showMenu(true);
   });
-  $("#content").on("mouseover", function(){
+  $("#content").on("pointerover", function(){
     App.showMenu(false);
   });
   App.showMenu(false,0);
@@ -512,6 +520,10 @@ App.onMouseDown = function(event){
   // only left click
   if(event.which != 1) return;
 
+  let e = event.originalEvent||event;
+  mouseX = e.pageX;
+  mouseY = e.pageY;
+  
   var loc = App.globalToLocal(mouseX,mouseY);
 
   var w = App.flipper.canvas.width;
@@ -522,8 +534,12 @@ App.onMouseDown = function(event){
 
   // crop
   if(App.mode=="crop"){
-    if(App._cropping) App._updateCropRect();
-    else App._updateCropRect("begin");
+    if(App._cropping){
+      App._updateCropRect();
+    }
+    else{
+      App._updateCropRect("begin");
+    }
   }
   else if(App.mode=="left" || App.mode=="top"){
     App.flipping = true;
@@ -537,6 +553,10 @@ App.onMouseDown = function(event){
 App.onMouseUp = function(event){
   // only left click
   if(event.which != 1) return;
+
+  let e = event.originalEvent||event;
+  mouseX = e.pageX;
+  mouseY = e.pageY;
 
   var loc = App.globalToLocal(mouseX,mouseY);
 
