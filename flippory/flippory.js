@@ -1,3 +1,49 @@
+
+
+// NOTE:
+//
+//  in most cases the maximum dimensions exceed 10,000 x 10,000 pixels,
+//  iOS devices limit the canvas size to only 4,096 x 4,096 pixels
+//  Exceeding the maximum dimensions or area renders the canvas unusable
+//  — drawing commands will not work.
+
+
+
+
+function detectMaxCanvasSizeOptimized() {
+  let minSize = 0; // Lower bound
+  let maxSize = 16384; // Upper bound, adjust based on assumptions
+  let maxCanvasSize = 0;
+  let testCanvas = document.createElement('canvas');
+  let context = testCanvas.getContext('2d');
+
+  while (minSize <= maxSize) {
+    let midSize = Math.floor((minSize + maxSize) / 2);
+    try {
+      // Try to set canvas size to midpoint
+      testCanvas.width = testCanvas.height = midSize;
+      context.fillRect(0, 0, 1, 1); // Try to draw on the canvas
+
+      if (testCanvas.width === midSize && testCanvas.height === midSize) {
+        maxCanvasSize = midSize; // Update max size if successful
+        minSize = midSize + 1; // Move lower bound up
+      } else {
+        // Size setting was not successful, adjust the upper bound
+        maxSize = midSize - 1;
+      }
+    } catch (e) {
+      // Catch any errors (e.g., memory issues), adjust the upper bound
+      maxSize = midSize - 1;
+    }
+  }
+
+  return maxCanvasSize;
+}
+
+
+
+
+
 function trace(text){
   if(console) console.log(text);
   if(!trace.verbose) return;
@@ -48,18 +94,19 @@ var DEFAULT_IMAGE = "instructions.png";
 /// document.writeln(s);
 ///}
 
-///////////////////////////////////////////////////////
+//
+//
+//    * *    * * * *  * * * *  
+//   *   *   *     *  *     *  
+//  * * * *  * * * *  * * * *  
+//  *     *  *        *        
+//  *     *  *        *        
+//
+// 
 
-////////    * * 
-////////  *     *
-////////  * * * *
-////////  *     *
-////////  *     *
-
-///////////////////////////////////////////////////////
+var App = {};
 
 //----------------------------------------------------- 
-var App = {};
 App.init = function(){
   this.history = [];
   App._crop = {};
@@ -109,39 +156,18 @@ App.init = function(){
   resizeOverlay();
 
 
-  // hack to make it work (poorly) on touch devices
-  if(App.TOUCH_DEVICE){
-    // mousemove
-    $(window).on("pointermove", throttle( function(e){
-      let event = e.originalEvent||e;
-      ///if(event.pageX != mouseX && event.pageY != mouseY){ // stutters
-        mouseX = event.pageX;
-        mouseY = event.pageY;
-        App._onMouseMove();
-        App.update();
-      ///}
-    }, 10));
-    $(content).on("pointerdown", App.onMouseDown.bind(this) );
-    $(content).on("pointerup", App.onMouseUp.bind(this) );
-    //$(window).on("mousedown", App.onMouseDown.bind(this) );
-    //$(window).on("mouseup", App.onMouseUp.bind(this) );
-    ///$(window).on("touchstart", App.onMouseDown.bind(this) );
-    ///$(window).on("touchend", App.onMouseUp.bind(this) );
-  }
-  else{
-    // mousemove
-    $(window).on("pointermove", throttle( function(e){
-      let event = e.originalEvent||e;
-      ///if(event.pageX != mouseX && event.pageY != mouseY){ // stutters
-        mouseX = event.pageX;
-        mouseY = event.pageY;
-        App._onMouseMove();
-        App.update();
-      ///}
-    }, 10));
-    $(window).on("pointerdown", App.onMouseDown.bind(this) );
-    $(window).on("pointerup", App.onMouseUp.bind(this) );
-  }
+  $(window).on("pointermove", throttle( function(e){
+    let event = e.originalEvent||e;
+    ///if(event.pageX != mouseX && event.pageY != mouseY){ // stutters
+      mouseX = event.pageX;
+      mouseY = event.pageY;
+      App._onMouseMove();
+      App.update();
+    ///}
+  }, 10));
+  $(window).on("pointerdown", App.onMouseDown.bind(this) );
+  $(window).on("pointerup", App.onMouseUp.bind(this) );
+
   
 
   ///if(1||App.TOUCH_DEVICE){
@@ -327,6 +353,7 @@ App.init = function(){
 
 }
 
+//----------------------------------------------------- 
 App.shift = function(state){
   if(state === App.shiftKey) return;
   App.shiftKey = state;
@@ -375,7 +402,7 @@ rnd.n = function(range, skew){
 App.showImport = function(state){
 
   // SECURITY issue:
-  // because of security issues, just suport local files // // //
+  // because of security issues, just support local files // // //
   if(state!==false) App.browse();
   return;
   // // // // //
@@ -579,6 +606,8 @@ App.onMouseUp = function(event){
   var h = App.flipper.canvas.height;
   var m = 5;
 
+  trace(`DPR:${window.devicePixelRatio} loc:${loc.x},${loc.y} w,h:${w},${h}`);
+
   loc.x = Math.max(m,Math.min(loc.x, w-1));
   loc.y = Math.max(m,Math.min(loc.y, h-1));
 
@@ -681,8 +710,8 @@ App._onMouseMove = function(){
           dir = dir=="left"||dir=="right"?"left":"top";
           App.setMode(dir);
 
-          // for App.TOUCH_DEVICE
-          if(App.mode=="left" || App.mode=="top"){
+          // for App.TOUCH_DEVICE only
+          if(App.TOUCH_DEVICE && (App.mode=="left" || App.mode=="top")){
             App.flipping = true;
             App.shift(false);
           }
@@ -860,6 +889,18 @@ App.storage = function(key, _value){
   }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
 // ////////////////////////////////////////////////////
 
 //   * * * *  *        *  * * * *  * * * *  * * * *  * * * *  
@@ -900,6 +941,7 @@ Flipper.prototype.reflect = function(side, offset){
     offset = parseFloat(offset);
     offset = dimension * (offset/100);
   }
+
   offset = ~~Math.max(0,Math.min(offset, dimension));
 
   if(side=="left"){
@@ -913,7 +955,7 @@ Flipper.prototype.reflect = function(side, offset){
     dimension = h = offsetY*2;
   }
 
-  // copy curent image to buffer
+  // copy current image to buffer
   var prevImage = this.copy(this.canvas);
 
   // resize
