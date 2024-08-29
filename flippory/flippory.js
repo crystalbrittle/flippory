@@ -11,8 +11,8 @@
 
 
 function detectMaxCanvasSizeOptimized() {
-  let minSize = 0; // Lower bound
-  let maxSize = 16384; // Upper bound, adjust based on assumptions
+  let minSize = 116384; // Lower bound
+  let maxSize = 1116384; // Upper bound, adjust based on assumptions
   let maxCanvasSize = 0;
   let testCanvas = document.createElement('canvas');
   let context = testCanvas.getContext('2d');
@@ -41,7 +41,43 @@ function detectMaxCanvasSizeOptimized() {
 }
 
 
+function getMaxCanvasSize() {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
 
+  function testSize(size) {
+      canvas.width = size;
+      canvas.height = size;
+      return canvas.width === size && canvas.height === size;
+  }
+
+  let low = 1;
+  let high = 11132768;  // Start with a large size; 32768 is a common upper bound for canvas sizes in browsers
+  let mid;
+
+  while (low < high) {
+      mid = (low + high + 1) >> 1;
+      if (testSize(mid)) {
+          low = mid;
+      } else {
+          high = mid - 1;
+      }
+  }
+
+  return low;
+}
+
+
+// 5301552 ok  12994x408
+//10602288 mal 25986x408
+
+$(function(){
+  trace(`DPR:${window.devicePixelRatio}`);
+
+  //trace( getMaxCanvasSize() )
+});
+
+var DEBUG = false;
 
 
 function trace(text){
@@ -51,8 +87,7 @@ function trace(text){
   $("#trace")[0].innerHTML += "<div class='traceitem'>"+text+"</div>";
   $("#trace")[0].scrollTop = $("#trace")[0].scrollHeight;
 }
-trace.verbose = false;
-
+trace.verbose = DEBUG;
 
 
 var DEFAULT_IMAGE = "instructions.png";
@@ -604,9 +639,13 @@ App.onMouseUp = function(event){
 
   var w = App.flipper.canvas.width;
   var h = App.flipper.canvas.height;
-  var m = 5;
 
-  trace(`DPR:${window.devicePixelRatio} loc:${loc.x},${loc.y} w,h:${w},${h}`);
+  if(DEBUG){
+    var parent = App.flipper.canvas.parentNode;
+    trace(`\n*** ${w}x${h} / ${parent.offsetWidth}x${parent.offsetHeight}`);
+    trace(`\n    ${w/h} / ${parent.offsetWidth/parent.offsetHeight}`);
+  }
+  var m = 5;
 
   loc.x = Math.max(m,Math.min(loc.x, w-1));
   loc.y = Math.max(m,Math.min(loc.y, h-1));
@@ -916,8 +955,12 @@ function Flipper(){
   this.body = document.createElement("div");
   this.body.className = "Flipper";
   this.body.component = this;
+
+  this.frame = document.createElement("div");
+  $(this.body).append(this.frame);
+
   this.canvas = document.createElement("canvas");
-  $(this.body).append(this.canvas);
+  $(this.frame).append(this.canvas);
   this.context = this.canvas.getContext("2d");
   this.image = new Image();
   $(this.image).on("load", function(){
