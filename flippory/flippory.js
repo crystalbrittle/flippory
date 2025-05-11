@@ -525,21 +525,22 @@ App.export = function() {
 
 //----------------------------------------------------- 
 App.undo = function(automated){
-  if(this.history.length<2) return;
-  if(automated){
-    // step back to last "automated"
-    var i = this.history.lastIndexOf("automated");
-    if(i==-1) return;
-    this.history = this.history.slice(0,i);
-    i = this.history.lastIndexOf("automated");
-    if(i==-1){
+  if (this.history.length < 2) return;
+
+  if (automated) {
+    var i = this.history.map(h => h.fn).lastIndexOf("automated-start");
+    if (i === -1) return;
+
+    this.history = this.history.slice(0, i);
+
+    if (this.history.map(h => h.fn).lastIndexOf("automated-start") === -1) {
       App.automated = false;
       $("body").toggleClass("automated", App.automated);
     }
-  }
-  else{
+  } else {
     this.history.pop();
   }
+
   this.replay();
   App.updateMenu();
 };
@@ -560,14 +561,14 @@ App.rotate = function(){
 }
 //----------------------------------------------------- 
 App.replay = function(){
-  var next = function(item, index){
+  var next = function(item){
     App.fitImage();
 
-    if(!item){
+    if (!item) {
       App.history = history;
       return;
     }
-    
+
     switch(item.fn){
       case "import":
         App.flipper.loadImage.call(App.flipper, item.params[0], null, function(){
@@ -575,7 +576,11 @@ App.replay = function(){
         });
         break;
       case "reflect":
-        App.flipper.reflect.apply(App.flipper, item.params);
+        if (App._validateReflect(item.params)) {
+          App.flipper.reflect.apply(App.flipper, item.params);
+        } else {
+          console.warn("Skipping invalid reflect step:", item.params);
+        }
         next(steps.shift());
         break;
       case "crop":
@@ -586,7 +591,12 @@ App.replay = function(){
         App.flipper.rotate.apply(App.flipper, item.params);
         next(steps.shift());
         break;
+      case "automated-start":
+      case "automated-end":
+        next(steps.shift());
+        break;
       default:
+        console.warn("Unknown history entry:", item);
         next(steps.shift());
     }
   };
@@ -594,7 +604,14 @@ App.replay = function(){
   var history = App.history.slice(0);
   var steps = App.history.slice(0);
   next(steps.shift());
-}
+};
+
+App._validateReflect = function([side, offset]) {
+  const canvas = App.flipper.canvas;
+  const dimension = (side === "left") ? canvas.width : canvas.height;
+  return typeof offset === "number" && offset >= 0 && offset <= dimension;
+};
+
 //----------------------------------------------------- 
 App.updateMenu = function(){
   var noHistory = (this.history.length<2);
@@ -1365,26 +1382,34 @@ CanvasRenderingContext2D.prototype.drawLine = function(x1, y1, x2, y2, dashLen, 
 ///}
 
 
-
 App.printHistory = function(){
-  var out = "";
-  for(var i=0, len=App.history.length; i<len; i++){
-    var item = App.history[i];
-    if(typeof item == "object"){
-      if(item.fn == "import"){
-        out += "import " + item.params[0].substr(0,55) + "...";
-      }
-      else{
-        out += item.fn + " " + item.params.join(",");
-      }
+  return App.history.map(h => {
+    if (typeof h === "object") {
+      const p = h.params ? h.params.join(",") : "";
+      return `${h.fn} ${p}`;
     }
-    else{
-      out += item
-    }
-    out += "\n";
-  }
-  return out;
+    return "[INVALID ENTRY]";
+  }).join("\n");
 };
+//App.printHistory = function(){
+//  var out = "";
+//  for(var i=0, len=App.history.length; i<len; i++){
+//    var item = App.history[i];
+//    if(typeof item == "object"){
+//      if(item.fn == "import"){
+//        out += "import " + item.params[0].substr(0,55) + "...";
+//      }
+//      else{
+//        out += item.fn + " " + item.params.join(",");
+//      }
+//    }
+//    else{
+//      out += item
+//    }
+//    out += "\n";
+//  }
+//  return out;
+//};
 
 //     * *    *     *  * * * *  * * * *  
 //    *   *   *     *     *     *     *  
@@ -1416,33 +1441,28 @@ App.printHistory = function(){
 ///  App.setMode("none");
 ///};
 App.auto = function(){
-  App.history.push( "automated" );
+  App.history.push({ fn: "automated-start" });
 
   App.automated = true;
   $("body").toggleClass("automated", App.automated);
 
-  var STEPS = Math.max(3,rnd(5)+rnd(5)+rnd(5)); // 5 10
-
-
-  ///trace.verbose=true;
-  ///trace(STEPS+" STEPS");
-  ///trace.verbose=!true;
-
+  var STEPS = Math.max(3, rnd(5) + rnd(5) + rnd(5));
   var canvas = App.flipper.canvas;
   var orgW = canvas.width;
   var orgH = canvas.height;
-  var t = 0, d = 0;//300; 
-  for(var i=0; i<STEPS; i++){
+  var t = 0, d = 0;
+
+  for (var i = 0; i < STEPS; i++) {
     App.auto.setTimeout(function(){
       App.auto.step(orgW, orgH);
     }, t);
     t += d;
   }
 
-  if(App.auto.perfect){
+  if (App.auto.perfect) {
     App.auto.setTimeout(function(){
-      App.auto.reflect("left", ~~(canvas.width/2));
-      App.auto.reflect("top", ~~(canvas.height/2));
+      App.auto.reflect("left", ~~(canvas.width / 2));
+      App.auto.reflect("top", ~~(canvas.height / 2));
       App.fitImage();
       App.updateMenu();
       App.setMode("none");
@@ -1450,9 +1470,8 @@ App.auto = function(){
   }
 
   App.auto.setTimeout(function(){
-    App.history.push( "automated-end" );
+    App.history.push({ fn: "automated-end" });
   }, t);
-
 };
 
 // no delay
@@ -1466,6 +1485,7 @@ App.auto.rotate = App.rotate;
 App.auto.reflect = App.reflect;
 App.auto.crop = function(x1, y1, x2, y2){
   App.flipper.crop(x1, y1, x2, y2);
+  App.history.push({ fn: "crop", params: [x1, y1, x2, y2] });
 }
 // no history
 ///App.auto.rotate = function(){App.flipper.rotate()};
