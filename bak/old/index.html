@@ -1,42 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
   <title>Flippory</title>
 
-  <!-- ( OPEN GRAPH + SEO ) -->
-  <meta property="og:title" content="Flippory" />
-  <meta property="og:description" content="Software and process relating to the flipping, mirroring, cropping, and replicating of images or parts of images in the pursuit of reinformation." />
-  <meta property="og:image" content="http://bludgeonsoft.org/flippory/resources/splashScreen.jpg" />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="http://bludgeonsoft.org/flippory/" />
-  <meta name="description" content="Software and process relating to the flipping, mirroring, cropping, and replicating of images or parts of images in the pursuit of reinformation." />
-  <link rel="image_src" href="resources/splashScreen.jpg" />
+  <!-- ( OPENGRAPH ~ ~ ~ ~ ~ ~ -->
+  <meta property='og:image' content='http://bludgeonsoft.org/flippory/resources/splashScreen.jpg'/>
+  <meta name="title" content="Flippory" />
+  <meta name="description" content='Software and process relating to the flipping, mirroring, cropping, and replicating of images or parts of images in the pursuit of reinformation.' />
+  <link rel="image_src" type="image/png" href="resources/splashScreen.jpg"/>
+  <!-- ) OPENGRAPH ~ ~ ~ ~ ~ ~ -->
 
-  <!-- ( MOBILE + APP-LIKE MODE ) -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Flippory" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="format-detection" content="telephone=no" />
+  <!-- ( MOBILE ~ ~ ~ ~ ~ ~ -->
+  <!-- home screen title. -->
+  <meta name="apple-mobile-web-app-title" content="Flippory">
+  <!-- full-screen mode. -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <!-- status bar black with white text. -->
+  <meta name="apple-mobile-web-app-status-bar-style" Xcontent="black-translucent" content="black">
+  <!-- disable phone number detection. -->
+  <meta name="format-detection" content="telephone=no">
+  <!-- set viewport. -->
+  <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, width=device-width">
+  <!-- startup images -->
+  <link rel="apple-touch-startup-image" href="resources/splashScreen.jpg">
+  <!-- icon -->
+  <link rel="apple-touch-icon" href="resources/icon1024.jpg">
+  <link rel="apple-touch-icon" sizes="1024x1024" href="resources/icon1024.jpg">
+  <link rel="apple-touch-icon-precomposed" href="resources/icon1024.jpg">
+  <link rel="apple-touch-icon-precomposed" sizes="1024x1024" href="resources/icon1024.jpg">
+  <link rel="icon" sizes="1024x1024" href="resources/icon1024.jpg">
+  <link rel="icon" sizes="128x128" href="resources/favicon.ico">
+  <!-- ) MOBILE ~ ~ ~ ~ ~ ~ -->
 
-  <!-- ( ICONS & PWA ) -->
-  <link rel="icon" type="image/png" href="resources/favicon/favicon-96.png" sizes="96x96" />
-  <link rel="icon" type="image/svg+xml" href="resources/favicon/favicon.svg" />
-  <link rel="shortcut icon" href="resources/favicon/favicon.ico" />
-  <link rel="apple-touch-icon" sizes="180x180" href="resources/favicon/apple-touch-icon-180.png" />
-  <link rel="apple-touch-icon" href="resources/favicon/apple-touch-icon.png" />
-  <link rel="manifest" href="resources/favicon/manifest.json" />
-
-  <!-- ( STARTUP SPLASH SCREEN - fallback ) -->
-  <link rel="apple-touch-startup-image" href="resources/splashScreen.jpg" media="(device-width: 375px)" />
-
-  <!-- ( JS ) -->
-  <script src="external/jquery-1.8.0.min.js"></script>
+  <script src="external/jquery-1.8.0.min.js"> </script>
   <script src="flippory.js"></script>
+  
 </head>
-
-
 <body>
 
 
@@ -132,11 +131,6 @@ body{
   cursor:default;
   overflow:hidden;
   color:black;
-
-
-  /**/
-  touch-action: none !important;
-  /**/
 }
 
 /* UI & menu */
@@ -510,8 +504,6 @@ body.touch{
   border-left:3px solid #666;
   max-height:100%;
   overflow-y:auto;
-
-  opacity: 0.75;
 }
 #trace > div{
   padding-left:5px;

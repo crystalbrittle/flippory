@@ -1,0 +1,21 @@
+{
+  "name": "Flippory",
+  "short_name": "Flippory",
+  "icons": [
+    {
+      "src": "/resources/favicon/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/resources/favicon/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "theme_color": "#24fd00",
+  "background_color": "#24fd00",
+  "display": "standalone"
+}
