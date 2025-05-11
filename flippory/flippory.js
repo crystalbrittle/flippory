@@ -8,7 +8,7 @@
 //  — drawing commands will not work.
 
 
-
+// - - -
 
 function detectMaxCanvasSizeOptimized() {
   let minSize = 116384; // Lower bound
@@ -476,7 +476,7 @@ App.import = function(path){
   App.flipper.loadImage(path, null, App._onLoad);
 }
 //----------------------------------------------------- 
-App.export = function(){
+App.exportORG = function(){
   if(App.history.length<2) return;
   var dataURL = App.flipper.canvas.toDataURL("image/png");
   $("#export").attr("href",dataURL);
@@ -491,6 +491,38 @@ App.export = function(){
   var fileName = "flippory"+d+a+".png";
   $("#export").attr("download",fileName);
 }
+
+//----------------------------------------------------- NEW
+App.export = function() {
+  if (App.history.length < 2) return;
+
+  App.flipper.canvas.toBlob(function(blob) {
+    if (!blob) {
+      console.error("Canvas toBlob failed.");
+      alert("Could not export image.");
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+
+    const d = (Math.round((Date.now() - 1577836800000) / 1000))
+              .toString(36).toUpperCase();
+    const suffix = App.automated ? "a" : "";
+    const fileName = "flippory" + d + suffix + ".png";
+
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, "image/png");
+}
+
+
+
+
 //----------------------------------------------------- 
 App.undo = function(automated){
   if(this.history.length<2) return;
