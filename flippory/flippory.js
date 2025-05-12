@@ -92,42 +92,6 @@ trace.verbose = DEBUG;
 
 var DEFAULT_IMAGE = "instructions.png";
 
-///function GetRandomImageURL($topic='', $min=0, $max=100){
-///  // get random image from Google
-///  if ($topic=='') $topic='image';
-///  $ofs=mt_rand($min, $max);
-///  $geturl='http://www.google.ca/images?q=' . $topic . '&start=' . $ofs . '&gbv=1';
-///  $data=file_get_contents($geturl);
- 
-///  $f1='<div id="center_col">';
-///  $f2='<a href="/imgres?imgurl=';
-///  $f3='&amp;imgrefurl=';
- 
-///  $pos1=strpos($data, $f1)+strlen($f1);
-///  if ($pos1==FALSE) return FALSE;
-///  $pos2=strpos($data, $f2, $pos1)+strlen($f2);
-///  if ($pos2==FALSE) return FALSE;
-///  $pos3=strpos($data, $f3, $pos2);
-///  if ($pos3==FALSE) return FALSE;
-///  return substr($data, $pos2, $pos3-$pos2);
-///}
-///function jsonFlickrApi(rsp) {
-/// if (rsp.stat != "ok"){
-///  return;
-/// }
-/// var s = "";
-/// var i = Math.random();
-/// i = i * 100;
-/// i = Math.ceil(i);
-/// photo = rsp.photos.photo[ i ];
-/// t_url = "http://farm" + photo.farm +
-/// ".static.flickr.com/" + photo.server + "/" +
-/// photo.id + "_" + photo.secret + "_" + "m.jpg";
-/// p_url = "http://www.flickr.com/photos/" +
-/// photo.owner + "/" + photo.id;
-/// s =  '<img alt="'+ photo.title + '"src="' + t_url + '"/>'  ;
-/// document.writeln(s);
-///}
 
 //
 //
@@ -143,6 +107,8 @@ var App = {};
 
 //----------------------------------------------------- 
 App.init = function(){
+  trace("= = = = = VERSION 18 = = = = =");
+
   this.history = [];
   App._crop = {};
   App._prevLoc = {x:0,y:0};
@@ -399,9 +365,10 @@ App.shift = function(state){
 
 //----------------------------------------------------- 
 App._onLoad = function(url, callback){
+  trace("* * * App._onLoad * * *");
   App.storage("lastURL", url);
   App.history = [];
-  App.history.push( {fn:"import", params:[url]} );
+  App.pushHistory( {fn:"import", params:[url]} );
   App.fitImage();
   App.showImport(false);
   if(App._onLoadCallback){
@@ -528,7 +495,8 @@ App.undo = function(automated){
   if (this.history.length < 2) return;
 
   if (automated) {
-    var i = this.history.map(h => h.fn).lastIndexOf("automated-start");
+    // Find last automated-start marker
+    const i = this.history.map(h => h.fn).lastIndexOf("automated-start");
     if (i === -1) return;
 
     this.history = this.history.slice(0, i);
@@ -538,12 +506,20 @@ App.undo = function(automated){
       $("body").toggleClass("automated", App.automated);
     }
   } else {
+    // Remove last action
     this.history.pop();
   }
+
+  // 🧹 Prune orphaned snapshots beyond current history
+  const lastSnapshotIndex = this.history.map(h => h.fn).lastIndexOf("snapshot");
+  this.history = this.history.filter((entry, index) =>
+    index <= lastSnapshotIndex || entry.fn !== "snapshot"
+  );
 
   this.replay();
   App.updateMenu();
 };
+
 ///App.checkAutomated = function(shiftKey){
 ///  return this.history.lastIndexOf("automated") != -1;
 ///};
@@ -554,63 +530,90 @@ App.crop = function(){
 }
 //----------------------------------------------------- 
 App.rotate = function(){
-  App.history.push( {fn:"rotate", params:[App.shiftKey]} );
+  App.pushHistory( {fn:"rotate", params:[App.shiftKey]} );
   App.flipper.rotate(App.shiftKey);
   App.updateMenu();
   App.fitImage();
 }
 //----------------------------------------------------- 
 App.replay = function(){
-  var next = function(item){
-    App.fitImage();
+  // Find last snapshot within *current history*
+  const availableHistory = App.history;
+  const snapshotIndex = availableHistory
+    .map(h => h.fn)
+    .lastIndexOf("snapshot");
 
-    if (!item) {
-      App.history = history;
-      return;
-    }
+  const useSnapshot = snapshotIndex !== -1 &&
+                      snapshotIndex < availableHistory.length;
 
-    switch(item.fn){
-      case "import":
-        App.flipper.loadImage.call(App.flipper, item.params[0], null, function(){
+  if (useSnapshot) {
+    const snap = availableHistory[snapshotIndex];
+    App.flipper.loadImage(snap.dataURL, null, function(){
+      replayFrom(snapshotIndex + 1);
+    });
+  } else {
+    replayFrom(0);
+  }
+
+  function replayFrom(startIndex) {
+    const steps = availableHistory.slice(startIndex);
+    const next = function(item){
+      App.fitImage();
+      if (!item) return;
+
+      switch(item.fn){
+        case "import":
+          App.flipper.loadImage.call(App.flipper, item.params[0], null, function(){
+            next(steps.shift());
+          });
+          break;
+        case "reflect":
+        case "crop":
+        case "rotate":
+          App.flipper[item.fn].apply(App.flipper, item.params);
           next(steps.shift());
-        });
-        break;
-      case "reflect":
-        if (App._validateReflect(item.params)) {
-          App.flipper.reflect.apply(App.flipper, item.params);
-        } else {
-          console.warn("Skipping invalid reflect step:", item.params);
-        }
-        next(steps.shift());
-        break;
-      case "crop":
-        App.flipper.crop.apply(App.flipper, item.params);
-        next(steps.shift());
-        break;
-      case "rotate":
-        App.flipper.rotate.apply(App.flipper, item.params);
-        next(steps.shift());
-        break;
-      case "automated-start":
-      case "automated-end":
-        next(steps.shift());
-        break;
-      default:
-        console.warn("Unknown history entry:", item);
-        next(steps.shift());
+          break;
+        case "snapshot":
+          next(steps.shift()); // skip
+          break;
+        case "automated-start":
+        case "automated-end":
+          next(steps.shift());
+          break;
+        default:
+          console.warn("Unknown history entry during replay:", item);
+          next(steps.shift());
+      }
+    };
+    next(steps.shift());
+  }
+};
+
+App.SNAPSHOT_FREQ = 10;
+App.pushHistory = function(step) {
+  App.history.push(step);
+
+  trace("history length = " + history.length);
+  
+  // Snapshot every 10th history action (excluding imports and snapshots)
+  const recentActionCount = App.history.filter(h =>
+    typeof h === "object" &&
+    ["reflect", "crop", "rotate"].includes(h.fn)
+  ).length;
+
+  if (recentActionCount % App.SNAPSHOT_FREQ === 0) {
+    const dataURL = App.snapshot();
+    if (dataURL) {
+      App.history.push({ fn: "snapshot", dataURL });
     }
-  };
-
-  var history = App.history.slice(0);
-  var steps = App.history.slice(0);
-  next(steps.shift());
+  }
 };
 
-App._validateReflect = function([side, offset]) {
-  const canvas = App.flipper.canvas;
-  const dimension = (side === "left") ? canvas.width : canvas.height;
-  return typeof offset === "number" && offset >= 0 && offset <= dimension;
-};
+///App._validateReflect = function([side, offset]) {
+///  const canvas = App.flipper.canvas;
+///  const dimension = (side === "left") ? canvas.width : canvas.height;
+///  return typeof offset === "number" && offset >= 0 && offset <= dimension;
+///};
 
 //----------------------------------------------------- 
 App.updateMenu = function(){
@@ -718,7 +721,7 @@ App.onMouseUp = function(event){
     }
     App.reflect(mode, offset);
     ///App.flipper.reflect(mode, offset);
-    ///App.history.push( {fn:"reflect", params:[mode, offset]} );
+    ///App.pushHistory( {fn:"reflect", params:[mode, offset]} );
   }
 
   App.fitImage();
@@ -732,7 +735,7 @@ App.onMouseUp = function(event){
 App.reflect = function(mode, offset){
   offset = Math.round(offset);
   App.flipper.reflect(mode, offset );
-  App.history.push( {fn:"reflect", params:[mode, offset]} );
+  App.pushHistory( {fn:"reflect", params:[mode, offset]} );
 };
 //----------------------------------------------------- 
 App.fitImage = function(){
@@ -875,7 +878,7 @@ App._updateCropRect = function(state){
     var p2 = {x:cropW+p1.x+1, y:cropH+p1.y+1};
 
     App.flipper.crop(p1.x, p1.y, p2.x, p2.y);
-    App.history.push( {fn:"crop", 
+    App.pushHistory( {fn:"crop", 
       params:[p1.x, p1.y, p2.x, p2.y]} );
     // cleanup
     App._stopCropping();
@@ -977,7 +980,14 @@ App.storage = function(key, _value){
   }
 }
 
-
+App.snapshot = function() {
+  try {
+    return App.flipper.canvas.toDataURL("image/png");
+  } catch (e) {
+    console.warn("Snapshot failed:", e);
+    return null;
+  }
+};
 
 
 
@@ -1139,7 +1149,7 @@ Flipper.prototype.rotate = function(counterclockwise){
 
 //----------------------------------------------------- 
 Flipper.prototype.loadImage = function(fileOrURL, callback, onImageLoad){
-  $(this.image).on("load", function(url){
+  $(this.image).one("load", function(url){
     onImageLoad(this.src);
   });
   this.image.src = " ";
@@ -1385,12 +1395,14 @@ CanvasRenderingContext2D.prototype.drawLine = function(x1, y1, x2, y2, dashLen, 
 App.printHistory = function(){
   return App.history.map(h => {
     if (typeof h === "object") {
+      if (h.fn === "snapshot") return "[snapshot]";
       const p = h.params ? h.params.join(",") : "";
       return `${h.fn} ${p}`;
     }
     return "[INVALID ENTRY]";
   }).join("\n");
 };
+
 //App.printHistory = function(){
 //  var out = "";
 //  for(var i=0, len=App.history.length; i<len; i++){
@@ -1420,7 +1432,7 @@ App.printHistory = function(){
 
 //= = = = = = = = = = = = = = = = = = = = = = = = = = = ~auto
 ///App.auto = function(){
-///  App.history.push( {fn:"auto", params:[]} );
+///  App.pushHistory( {fn:"auto", params:[]} );
 ///
 ///  var STEPS = 5;
 ///
@@ -1441,7 +1453,7 @@ App.printHistory = function(){
 ///  App.setMode("none");
 ///};
 App.auto = function(){
-  App.history.push({ fn: "automated-start" });
+  App.pushHistory({ fn: "automated-start" });
 
   App.automated = true;
   $("body").toggleClass("automated", App.automated);
@@ -1470,7 +1482,7 @@ App.auto = function(){
   }
 
   App.auto.setTimeout(function(){
-    App.history.push({ fn: "automated-end" });
+    App.pushHistory({ fn: "automated-end" });
   }, t);
 };
 
@@ -1485,7 +1497,7 @@ App.auto.rotate = App.rotate;
 App.auto.reflect = App.reflect;
 App.auto.crop = function(x1, y1, x2, y2){
   App.flipper.crop(x1, y1, x2, y2);
-  App.history.push({ fn: "crop", params: [x1, y1, x2, y2] });
+  App.pushHistory({ fn: "crop", params: [x1, y1, x2, y2] });
 }
 // no history
 ///App.auto.rotate = function(){App.flipper.rotate()};
