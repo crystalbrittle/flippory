@@ -590,7 +590,10 @@ App.replay = function(){
 };
 
 App.SNAPSHOT_FREQ = 10;
+
+//----------------------------------------------------- 
 App.pushHistory = function(step) {
+  trace("pushHistory", step.fn);
   App.history.push(step);
 
   trace("history length = " + history.length);
