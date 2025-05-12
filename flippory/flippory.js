@@ -232,7 +232,7 @@ App.init = function(){
   });
   // crop
   $("#crop").on("click", function(){
-    App.crop();
+    App.cropMode();
   });
   // rotate
   $("#rotate").on("click", function(){
@@ -311,19 +311,16 @@ App.init = function(){
     // i 
     if(key == 73){
       $("#browse").trigger( "click" );
-      ///App.browse();
     }
     // // // // //
 
     // c
     if(key == 67){
       $("#crop").trigger( "click" );
-      ///App.crop();
     }
     // r
     if(key == 82 && !App.ctrlKey){
       $("#rotate").trigger( "click" );
-      ///App.rotate();
     }
     // a
     if(key == 65 && !App.ctrlKey){
@@ -404,34 +401,31 @@ rnd.n = function(range, skew){
 App.showImport = function(state){
 
   // SECURITY issue:
-  // because of security issues, just support local files // // //
+  // because of security issues, just support local files
   if(state!==false) App.browse();
-  return;
-  // // // // //
-
-  if(state==undefined) state = !$("#menu").hasClass("importOpen");
-  var speed = 100;
-  if(state){ // show
-    $("#closeImport").fadeIn(speed);
-    $("#importui").animate({
-      left:50+"px",
-    },speed);
-    $("#importui > input").focus().select();
-    $("#menu").addClass("importOpen");
-    $(".crosshairs").hide();
-    App._importOpen = true;
-  }
-  else{ // hide
-    $("#closeImport").fadeOut(speed);
-    $("#importui").animate({
-      left:(-700)+"px",
-    },speed);
-    $("#menu").removeClass("importOpen");
-    $("#importui > input").blur();
-    $(".crosshairs").show();
-    App._importOpen = false;
-  }
-
+  //
+  ///if(state==undefined) state = !$("#menu").hasClass("importOpen");
+  ///var speed = 100;
+  ///if(state){ // show
+  ///  $("#closeImport").fadeIn(speed);
+  ///  $("#importui").animate({
+  ///    left:50+"px",
+  ///  },speed);
+  ///  $("#importui > input").focus().select();
+  ///  $("#menu").addClass("importOpen");
+  ///  $(".crosshairs").hide();
+  ///  App._importOpen = true;
+  ///}
+  ///else{ // hide
+  ///  $("#closeImport").fadeOut(speed);
+  ///  $("#importui").animate({
+  ///    left:(-700)+"px",
+  ///  },speed);
+  ///  $("#menu").removeClass("importOpen");
+  ///  $("#importui > input").blur();
+  ///  $(".crosshairs").show();
+  ///  App._importOpen = false;
+  ///}
 }
 //----------------------------------------------------- 
 App.browse = function(){
@@ -443,21 +437,21 @@ App.import = function(path){
   App.flipper.loadImage(path, null, App._onLoad);
 }
 //----------------------------------------------------- 
-App.exportORG = function(){
-  if(App.history.length<2) return;
-  var dataURL = App.flipper.canvas.toDataURL("image/png");
-  $("#export").attr("href",dataURL);
-
-  /// // subtract ms since 2020 from date now
-  /// var d = (new Date("2020-01-01")).getTime();
-  /// //2000=946684800000  2020=1577836800000
-  // seconds since 2020-01-01
-  var d = (Math.round((Date.now()-1577836800000)/1000))
-          .toString(36).toUpperCase();
-  var a = App.automated?"a":"";
-  var fileName = "flippory"+d+a+".png";
-  $("#export").attr("download",fileName);
-}
+///App.exportORG = function(){
+///  if(App.history.length<2) return;
+///  var dataURL = App.flipper.canvas.toDataURL("image/png");
+///  $("#export").attr("href",dataURL);
+///
+///  /// // subtract ms since 2020 from date now
+///  /// var d = (new Date("2020-01-01")).getTime();
+///  /// //2000=946684800000  2020=1577836800000
+///  // seconds since 2020-01-01
+///  var d = (Math.round((Date.now()-1577836800000)/1000))
+///          .toString(36).toUpperCase();
+///  var a = App.automated?"a":"";
+///  var fileName = "flippory"+d+a+".png";
+///  $("#export").attr("download",fileName);
+///}
 
 //----------------------------------------------------- NEW
 App.export = function() {
@@ -488,25 +482,29 @@ App.export = function() {
 }
 
 
-
-
+App.getAutomatedStart = function(){
+  return this.history.map(h => h.fn).lastIndexOf("automated-start");
+}
+///App.checkAutomated = function(shiftKey){
+///  return this.history.lastIndexOf("automated") != -1;
+///};
 //----------------------------------------------------- 
 App.undo = function(automated){
   if (this.history.length < 2) return;
 
   if (automated) {
-    // Find last automated-start marker
-    const i = this.history.map(h => h.fn).lastIndexOf("automated-start");
-    if (i === -1) return;
-
-    this.history = this.history.slice(0, i);
-
-    if (this.history.map(h => h.fn).lastIndexOf("automated-start") === -1) {
-      App.automated = false;
-      $("body").toggleClass("automated", App.automated);
+    // find last automated-start marker
+    const i = App.getAutomatedStart();
+    if (i > -1){
+      this.history = this.history.slice(0, i);
     }
-  } else {
-    // Remove last action
+    // do we still have automated history?
+    if(App.getAutomatedStart() === -1) {
+      App.automated = false;
+    }
+    $("body").toggleClass("automated", App.automated);
+  } 
+  else {
     this.history.pop();
   }
 
@@ -520,18 +518,16 @@ App.undo = function(automated){
   App.updateMenu();
 };
 
-///App.checkAutomated = function(shiftKey){
-///  return this.history.lastIndexOf("automated") != -1;
-///};
+
 //----------------------------------------------------- 
-App.crop = function(){
+App.cropMode = function(){
   App.setMode("crop");
   App.updateMenu();
 }
 //----------------------------------------------------- 
 App.rotate = function(){
-  App.pushHistory( {fn:"rotate", params:[App.shiftKey]} );
   App.flipper.rotate(App.shiftKey);
+  App.pushHistory( {fn:"rotate", params:[App.shiftKey]} );
   App.updateMenu();
   App.fitImage();
 }
@@ -543,8 +539,8 @@ App.replay = function(){
     .map(h => h.fn)
     .lastIndexOf("snapshot");
 
-  const useSnapshot = snapshotIndex !== -1 &&
-                      snapshotIndex < availableHistory.length;
+    // <-- here useSnapshot causes replay coords issue
+  let useSnapshot = snapshotIndex !== -1 && snapshotIndex < availableHistory.length;
 
   if (useSnapshot) {
     const snap = availableHistory[snapshotIndex];
@@ -589,16 +585,18 @@ App.replay = function(){
   }
 };
 
-App.SNAPSHOT_FREQ = 10;
+App.SNAPSHOT_FREQ = 30;
 
 //----------------------------------------------------- 
+// NOTE: pushHistory needs to come *after* the step precesses
+//       otherwise snapshots will break the history
 App.pushHistory = function(step) {
-  trace("pushHistory", step.fn);
-  App.history.push(step);
 
-  trace("history length = " + history.length);
-  
-  // Snapshot every 10th history action (excluding imports and snapshots)
+  App.history.push(step);
+  trace(`--- --- ${App.history.length} pushHistory ${step.fn} --- ---`);
+
+
+  // Snapshot every Nth history action (excluding imports and snapshots)
   const recentActionCount = App.history.filter(h =>
     typeof h === "object" &&
     ["reflect", "crop", "rotate"].includes(h.fn)
@@ -608,8 +606,10 @@ App.pushHistory = function(step) {
     const dataURL = App.snapshot();
     if (dataURL) {
       App.history.push({ fn: "snapshot", dataURL });
+      trace(`--- --- ${App.history.length} pushHistory SNAPSHOT --- ---`);
     }
   }
+
 };
 
 ///App._validateReflect = function([side, offset]) {
@@ -621,7 +621,7 @@ App.pushHistory = function(step) {
 //----------------------------------------------------- 
 App.updateMenu = function(){
   var noHistory = (this.history.length<2);
-  var noAuto = this.history.lastIndexOf("automated") == -1;
+  var noAuto = App.getAutomatedStart() == -1;///this.history.lastIndexOf("automated") == -1;
   var undoDisabled = noHistory || (App.shiftKey && noAuto);
   $("#undo").toggleClass("disabled", undoDisabled );
   $("#export").toggleClass("disabled", noHistory);
@@ -880,9 +880,10 @@ App._updateCropRect = function(state){
     var p1 = App.globalToLocal(App._crop.rect.x, App._crop.rect.y);
     var p2 = {x:cropW+p1.x+1, y:cropH+p1.y+1};
 
-    App.flipper.crop(p1.x, p1.y, p2.x, p2.y);
-    App.pushHistory( {fn:"crop", 
-      params:[p1.x, p1.y, p2.x, p2.y]} );
+    App.crop(p1.x, p1.y, p2.x, p2.y);
+    ///App.flipper.crop(p1.x, p1.y, p2.x, p2.y);
+    ///App.pushHistory( {fn:"crop", params:[p1.x, p1.y, p2.x, p2.y]} );
+
     // cleanup
     App._stopCropping();
     return;
@@ -897,6 +898,10 @@ App._stopCropping = function(){
   App._cropping = false;
 }
 
+App.crop = function(x1, y1, x2, y2){
+  App.flipper.crop(x1, y1, x2, y2);
+  App.pushHistory({ fn: "crop", params: [x1, y1, x2, y2] });
+}
 
 //----------------------------------------------------- 
 App.getMouseDir = function(x,y){
@@ -1396,35 +1401,41 @@ CanvasRenderingContext2D.prototype.drawLine = function(x1, y1, x2, y2, dashLen, 
 
 
 App.printHistory = function(){
-  return App.history.map(h => {
-    if (typeof h === "object") {
-      if (h.fn === "snapshot") return "[snapshot]";
-      const p = h.params ? h.params.join(",") : "";
-      return `${h.fn} ${p}`;
+  return App.history.map(item => {
+    if (typeof item === "object") {
+      if (item.fn === "snapshot") return "[snapshot]";
+      let out = "";
+      if(item.fn == "import"){
+        out += "import " + item.params[0].substr(0,15) + "...";
+      }
+      else{
+        out += item.fn + " " + (item.params ? item.params.join(",") : "");
+      }
+      return out
     }
     return "[INVALID ENTRY]";
   }).join("\n");
 };
 
-//App.printHistory = function(){
-//  var out = "";
-//  for(var i=0, len=App.history.length; i<len; i++){
-//    var item = App.history[i];
-//    if(typeof item == "object"){
-//      if(item.fn == "import"){
-//        out += "import " + item.params[0].substr(0,55) + "...";
-//      }
-//      else{
-//        out += item.fn + " " + item.params.join(",");
-//      }
-//    }
-//    else{
-//      out += item
-//    }
-//    out += "\n";
-//  }
-//  return out;
-//};
+///App.printHistory = function(){
+///  var out = "";
+///  for(var i=0, len=App.history.length; i<len; i++){
+///    var item = App.history[i];
+///    if(typeof item == "object"){
+///      if(item.fn == "import"){
+///        out += "import " + item.params[0].substr(0,55) + "...";
+///      }
+///      else{
+///        out += item.fn + " " + item.params.join(",");
+///      }
+///    }
+///    else{
+///      out += item
+///    }
+///    out += "\n";
+///  }
+///  return out;
+///};
 
 //     * *    *     *  * * * *  * * * *  
 //    *   *   *     *     *     *     *  
@@ -1456,6 +1467,7 @@ App.printHistory = function(){
 ///  App.setMode("none");
 ///};
 App.auto = function(){
+  trace("> > > > automated-start");
   App.pushHistory({ fn: "automated-start" });
 
   App.automated = true;
@@ -1486,6 +1498,7 @@ App.auto = function(){
 
   App.auto.setTimeout(function(){
     App.pushHistory({ fn: "automated-end" });
+    trace("< < < < automated-end");
   }, t);
 };
 
@@ -1498,10 +1511,9 @@ App.auto.setTimeout = function(fn, t){
 // want history
 App.auto.rotate = App.rotate;
 App.auto.reflect = App.reflect;
-App.auto.crop = function(x1, y1, x2, y2){
-  App.flipper.crop(x1, y1, x2, y2);
-  App.pushHistory({ fn: "crop", params: [x1, y1, x2, y2] });
-}
+App.auto.crop = App.crop;
+
+
 // no history
 ///App.auto.rotate = function(){App.flipper.rotate()};
 ///App.auto.reflect = function(a,b){App.flipper.reflect(a,b)};
@@ -1571,34 +1583,16 @@ App.auto.step = function(orgW, orgH){
     mode = "top";
     offset = rnd.n(canvas.height);
   }
-  trace("reflect mode "+mode+" offset "+offset);
   App.auto.reflect(mode, offset);
 
 
 
   // crop
   var N = 1.5;
-  ///if(canvas.width>orgW*2 || canvas.height>orgH*2 || rnd(20)==1){
   var forceCrop = rnd(20)==1;
   if(sz>orgSz*N || forceCrop){
     if(forceCrop) trace("FORCECROP");
     else trace("CROP sz "+sz +", orgSz "+orgSz);
-
-    // v1
-    ///var x1, y1, x2, y2;
-    ///x1 = rnd.n(App.flipper.canvas.width);
-    ///x2 = x1 + rnd.n(App.flipper.canvas.width-x1);
-    ///y1 = rnd.n(App.flipper.canvas.height);
-    ///y2 = y1 + rnd.n(App.flipper.canvas.height-y1);
-    ///App.flipper.crop(x1, y1, x2, y2);
-    ///if(forceCrop){
-    ///  App.auto.reflect("left", canvas.width);
-    ///  App.auto.reflect("top", canvas.height);
-    ///}
-    ///else{
-    ///  App.auto.reflect("left", ~~(canvas.width/2));
-    ///  App.auto.reflect("top", ~~(canvas.height/2));
-    ///}
 
     // v2
     var minW = ~~(orgW * .25);
@@ -1614,38 +1608,6 @@ App.auto.step = function(orgW, orgH){
 
   }
 };
-///App.auto.step1 = function(){
-///  ///// crop
-///  ///if(false){
-///  ///  App.mode = "crop";
-///  ///  App.flipping = false;
-///  ///}
-///  // rotate
-///  if(rnd(2)==1){
-///    App.auto.rotate();
-///  }
-///  // rotate
-///  if(rnd(2)==1){
-///    App.auto.rotate();
-///  }
-///  // rotate
-///  if(rnd(2)==1){
-///    App.auto.rotate();
-///  }
-///  // flip
-///  App.flipping = true;
-///  var mode, offset;
-///  if(rnd(2)){
-///    mode = "left";
-///    offset = rnd.n(App.flipper.canvas.width);
-///  }
-///  else{
-///    mode = "top";
-///    offset = rnd.n(App.flipper.canvas.height);
-///  }
-///  trace("reflect mode "+mode+" offset "+offset);
-///  App.auto.reflect(mode, offset);
-///};
 
 
 
