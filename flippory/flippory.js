@@ -585,7 +585,7 @@ App.replay = function(){
   }
 };
 
-App.SNAPSHOT_FREQ = 30;
+App.SNAPSHOT_FREQ = 15;
 
 //----------------------------------------------------- 
 // NOTE: pushHistory needs to come *after* the step precesses
@@ -602,7 +602,7 @@ App.pushHistory = function(step) {
     ["reflect", "crop", "rotate"].includes(h.fn)
   ).length;
 
-  if (recentActionCount % App.SNAPSHOT_FREQ === 0) {
+  if (recentActionCount % App.SNAPSHOT_FREQ === App.SNAPSHOT_FREQ-1 ) {
     const dataURL = App.snapshot();
     if (dataURL) {
       App.history.push({ fn: "snapshot", dataURL });
