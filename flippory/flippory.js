@@ -10,71 +10,68 @@
 
 // - - -
 
-function detectMaxCanvasSizeOptimized() {
-  let minSize = 116384; // Lower bound
-  let maxSize = 1116384; // Upper bound, adjust based on assumptions
-  let maxCanvasSize = 0;
-  let testCanvas = document.createElement('canvas');
-  let context = testCanvas.getContext('2d');
+///function detectMaxCanvasSizeOptimized() {
+///  let minSize = 116384; // Lower bound
+///  let maxSize = 1116384; // Upper bound, adjust based on assumptions
+///  let maxCanvasSize = 0;
+///  let testCanvas = document.createElement('canvas');
+///  let context = testCanvas.getContext('2d');
+///
+///  while (minSize <= maxSize) {
+///    let midSize = Math.floor((minSize + maxSize) / 2);
+///    try {
+///      // Try to set canvas size to midpoint
+///      testCanvas.width = testCanvas.height = midSize;
+///      context.fillRect(0, 0, 1, 1); // Try to draw on the canvas
+///
+///      if (testCanvas.width === midSize && testCanvas.height === midSize) {
+///        maxCanvasSize = midSize; // Update max size if successful
+///        minSize = midSize + 1; // Move lower bound up
+///      } else {
+///        // Size setting was not successful, adjust the upper bound
+///        maxSize = midSize - 1;
+///      }
+///    } catch (e) {
+///      // Catch any errors (e.g., memory issues), adjust the upper bound
+///      maxSize = midSize - 1;
+///    }
+///  }
+///
+///  return maxCanvasSize;
+///}
 
-  while (minSize <= maxSize) {
-    let midSize = Math.floor((minSize + maxSize) / 2);
-    try {
-      // Try to set canvas size to midpoint
-      testCanvas.width = testCanvas.height = midSize;
-      context.fillRect(0, 0, 1, 1); // Try to draw on the canvas
-
-      if (testCanvas.width === midSize && testCanvas.height === midSize) {
-        maxCanvasSize = midSize; // Update max size if successful
-        minSize = midSize + 1; // Move lower bound up
-      } else {
-        // Size setting was not successful, adjust the upper bound
-        maxSize = midSize - 1;
-      }
-    } catch (e) {
-      // Catch any errors (e.g., memory issues), adjust the upper bound
-      maxSize = midSize - 1;
-    }
-  }
-
-  return maxCanvasSize;
-}
-
-
-function getMaxCanvasSize() {
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-
-  function testSize(size) {
-      canvas.width = size;
-      canvas.height = size;
-      return canvas.width === size && canvas.height === size;
-  }
-
-  let low = 1;
-  let high = 11132768;  // Start with a large size; 32768 is a common upper bound for canvas sizes in browsers
-  let mid;
-
-  while (low < high) {
-      mid = (low + high + 1) >> 1;
-      if (testSize(mid)) {
-          low = mid;
-      } else {
-          high = mid - 1;
-      }
-  }
-
-  return low;
-}
+///function getMaxCanvasSize() {
+///  const canvas = document.createElement('canvas');
+///  const context = canvas.getContext('2d');
+///
+///  function testSize(size) {
+///      canvas.width = size;
+///      canvas.height = size;
+///      return canvas.width === size && canvas.height === size;
+///  }
+///
+///  let low = 1;
+///  let high = 11132768;  // Start with a large size; 32768 is a common upper bound for canvas sizes in browsers
+///  let mid;
+///
+///  while (low < high) {
+///      mid = (low + high + 1) >> 1;
+///      if (testSize(mid)) {
+///          low = mid;
+///      } else {
+///          high = mid - 1;
+///      }
+///  }
+///
+///  return low;
+///}
 
 
-// 5301552 ok  12994x408
-//10602288 mal 25986x408
+
+
 
 $(function(){
   trace(`DPR:${window.devicePixelRatio}`);
-
-  //trace( getMaxCanvasSize() )
 });
 
 var DEBUG = false;
@@ -104,6 +101,67 @@ var DEFAULT_IMAGE = "instructions.png";
 // 
 
 var App = {};
+
+// NEW NEW NEW --- --- --- --- --- --- --- ---
+
+App.getMaxCanvasDimension = function(){
+  if (App._maxCanvasSize) return App._maxCanvasSize;
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  let low = 1, high = 8192; // iOS safe, others go bigger
+
+  while (low < high) {
+    const mid = (low + high + 1) >> 1;
+    try {
+      canvas.width = canvas.height = mid;
+      ctx.fillRect(0, 0, 1, 1);
+      if (canvas.width === mid) {
+        low = mid;
+      } else {
+        high = mid - 1;
+      }
+    } catch (e) {
+      high = mid - 1;
+    }
+  }
+
+  App._maxCanvasSize = low;
+
+  trace(`--- --- --- --- Max canvas size: ${low}x${low}`);
+  return low;
+};
+App.canvasFailed = function(canvas){
+  try {
+    const ctx = canvas.getContext("2d");
+    const pixel = ctx.getImageData(0, 0, 1, 1).data;
+    return pixel[3] === 0; // transparent = failed draw
+  } 
+  catch (e) {
+    return true; // error = failure
+  }
+};
+
+App.MAX_CANVAS_WIDTH = 4096;
+App.MAX_CANVAS_HEIGHT = 4096;
+App.rescaleAndRetry = function(prevImage){
+  const max = App.getMaxCanvasDimension();
+  const scale = max / Math.max(prevImage.width, prevImage.height);
+  const w = Math.floor(prevImage.width * scale);
+  const h = Math.floor(prevImage.height * scale);
+
+  const canvas = this.canvas;
+  canvas.width = w;
+  canvas.height = h;
+  this.context.drawImage(prevImage, 0, 0, w, h);
+};
+// --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+
 
 //----------------------------------------------------- 
 App.init = function(){
@@ -1037,8 +1095,111 @@ function Flipper(){
   }.bind(this) );
   this.redo = [];
 }
+//-----------------------------------------------------
+Flipper.prototype._clampSize = function(w, h) {
+  const maxDevice = App.getMaxCanvasDimension?.() || 4096;
+  const maxConfigured = Math.min(maxDevice, App.MAX_CANVAS_WIDTH || 4096, App.MAX_CANVAS_HEIGHT || 4096);
+  const scale = Math.min(1, maxConfigured / Math.max(w, h));
+
+  if(scale < 1) {
+    trace(`=== === Scaling down to fit within max canvas size from ${w}x${h}`);
+  }
+  return {
+    width: Math.floor(w * scale),
+    height: Math.floor(h * scale),
+    scale
+  };
+};
 //----------------------------------------------------- 
 Flipper.prototype.reflect = function(side, offset){
+  trace("reflect " + side + " at " + offset);
+
+  const prevImage = this.copy(this.canvas); // backup before resizing
+
+  let w = this.canvas.width;
+  let h = this.canvas.height;
+
+  const dimension = (side === "left") ? w : h;
+
+  if (offset == undefined) offset = "80%";
+  if (typeof offset === "string") {
+    offset = parseFloat(offset);
+    offset = dimension * (offset / 100);
+  }
+
+  offset = ~~Math.max(0, Math.min(offset, dimension));
+
+  let newW = w;
+  let newH = h;
+  let offsetX = w;
+  let offsetY = h;
+
+  if (side === "left") {
+    offsetX = offset;
+    newW = offsetX * 2;
+  } else if (side === "top") {
+    offsetY = offset;
+    newH = offsetY * 2;
+  }
+
+  // Clamp size and calculate scale
+  const clamped = this._clampSize(newW, newH);
+  const scale = clamped.scale;
+
+  this.canvas.width = clamped.width;
+  this.canvas.height = clamped.height;
+
+  // Apply transform reset
+  this.context.setTransform(1, 0, 0, 1, 0, 0);
+
+  // Scale drawing
+  const drawW = prevImage.width * scale;
+  const drawH = prevImage.height * scale;
+
+  this.context.drawImage(prevImage, 0, 0, drawW, drawH);
+
+  // Apply reflection
+  if (side === "left") {
+    this.context.translate(clamped.width, 0);
+    this.context.scale(-1, 1);
+  } else {
+    this.context.translate(0, clamped.height);
+    this.context.scale(1, -1);
+  }
+
+  const refOffsetX = offsetX * scale;
+  const refOffsetY = offsetY * scale;
+
+  this.context.clearRect(0, 0, refOffsetX, refOffsetY);
+  this.context.drawImage(
+    prevImage,
+    0, 0, offsetX, offsetY,
+    0, 0, refOffsetX, refOffsetY
+  );
+
+  // Check for draw failure
+  if (App.canvasFailed(this.canvas)) {
+    console.warn("Canvas draw failed — rescaling and retrying...");
+    alert("Image was too large to render. Automatically scaling down.");
+
+    const max = App.getMaxCanvasDimension();
+    const scale = max / Math.max(prevImage.width, prevImage.height);
+    const retryW = Math.floor(prevImage.width * scale);
+    const retryH = Math.floor(prevImage.height * scale);
+
+    this.canvas.width = retryW;
+    this.canvas.height = retryH;
+    this.context.setTransform(1, 0, 0, 1, 0, 0);
+    this.context.drawImage(prevImage, 0, 0, retryW, retryH);
+  }
+
+  return this;
+};
+
+
+
+
+Flipper.prototype.reflectORG = function(side, offset){
   trace("reflect "+side+" at "+offset);
   var w = this.canvas.width, 
       h = this.canvas.height, 
