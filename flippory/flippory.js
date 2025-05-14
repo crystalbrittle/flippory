@@ -102,7 +102,7 @@ var DEFAULT_IMAGE = "instructions.png";
 
 var App = {};
 
-// NEW NEW NEW --- --- --- --- --- --- --- ---
+// adaptive scaling --- --- --- --- --- --- --- ---
 
 App.getMaxCanvasDimension = function(){
   if (App._maxCanvasSize) return App._maxCanvasSize;
@@ -131,6 +131,7 @@ App.getMaxCanvasDimension = function(){
   trace(`--- --- --- --- Max canvas size: ${low}x${low}`);
   return low;
 };
+// --- --- --- --- --- --- --- --- --- --- ---
 App.canvasFailed = function(canvas){
   try {
     const ctx = canvas.getContext("2d");
@@ -144,6 +145,8 @@ App.canvasFailed = function(canvas){
 
 App.MAX_CANVAS_WIDTH = 4096;
 App.MAX_CANVAS_HEIGHT = 4096;
+
+// --- --- --- --- --- --- --- --- --- --- ---
 App.rescaleAndRetry = function(prevImage){
   const max = App.getMaxCanvasDimension();
   const scale = max / Math.max(prevImage.width, prevImage.height);
@@ -165,7 +168,7 @@ App.rescaleAndRetry = function(prevImage){
 
 //----------------------------------------------------- 
 App.init = function(){
-  trace("= = = = = VERSION 18 = = = = =");
+  trace("= = = = = VERSION 18.8 = = = = =");
 
   this.history = [];
   App._crop = {};
@@ -1095,6 +1098,7 @@ function Flipper(){
   }.bind(this) );
   this.redo = [];
 }
+
 //-----------------------------------------------------
 Flipper.prototype._clampSize = function(w, h) {
   const maxDevice = App.getMaxCanvasDimension?.() || 4096;
@@ -1110,6 +1114,7 @@ Flipper.prototype._clampSize = function(w, h) {
     scale
   };
 };
+
 //----------------------------------------------------- 
 Flipper.prototype.reflect = function(side, offset){
   trace("reflect " + side + " at " + offset);
@@ -1196,58 +1201,6 @@ Flipper.prototype.reflect = function(side, offset){
   return this;
 };
 
-
-
-
-Flipper.prototype.reflectORG = function(side, offset){
-  trace("reflect "+side+" at "+offset);
-  var w = this.canvas.width, 
-      h = this.canvas.height, 
-      dimension, offsetX, offsetY;
-
-  dimension = (side=="left") ? w:h;
-
-  if(offset==undefined) offset = "80%";
-  if(typeof offset == "string"){
-    offset = parseFloat(offset);
-    offset = dimension * (offset/100);
-  }
-
-  offset = ~~Math.max(0,Math.min(offset, dimension));
-
-  if(side=="left"){
-    offsetX = offset;
-    offsetY = this.canvas.height;
-    dimension = w = offsetX*2;
-  }
-  else if(side=="top"){
-    offsetX = this.canvas.width;
-    offsetY = offset;
-    dimension = h = offsetY*2;
-  }
-
-  // copy current image to buffer
-  var prevImage = this.copy(this.canvas);
-
-  // resize
-  this.canvas.width = w;
-  this.canvas.height = h;
-
-  // copy buffer to canvas
-  this.context.drawImage(prevImage, 0, 0, prevImage.width, prevImage.height);
-  if(side=="left"){
-    this.context.translate(w, 0);
-    this.context.scale(-1,1);
-  }
-  else{
-    this.context.translate(0, h);
-    this.context.scale(1,-1);
-  }
-  this.context.clearRect(0, 0, offsetX, offsetY);
-  this.context.drawImage(prevImage, 0, 0, offsetX, offsetY, 0, 0, offsetX, offsetY);
-
-  return this;
-}
 //----------------------------------------------------- 
 Flipper.prototype.copy = function(from, to){
   if(!to) to = document.createElement("canvas");
@@ -1561,6 +1514,8 @@ CanvasRenderingContext2D.prototype.drawLine = function(x1, y1, x2, y2, dashLen, 
 ///}
 
 
+
+// --- --- --- --- --- --- --- --- --- --- ---
 App.printHistory = function(){
   return App.history.map(item => {
     if (typeof item === "object") {
@@ -1578,25 +1533,6 @@ App.printHistory = function(){
   }).join("\n");
 };
 
-///App.printHistory = function(){
-///  var out = "";
-///  for(var i=0, len=App.history.length; i<len; i++){
-///    var item = App.history[i];
-///    if(typeof item == "object"){
-///      if(item.fn == "import"){
-///        out += "import " + item.params[0].substr(0,55) + "...";
-///      }
-///      else{
-///        out += item.fn + " " + item.params.join(",");
-///      }
-///    }
-///    else{
-///      out += item
-///    }
-///    out += "\n";
-///  }
-///  return out;
-///};
 
 //     * *    *     *  * * * *  * * * *  
 //    *   *   *     *     *     *     *  
@@ -1606,27 +1542,7 @@ App.printHistory = function(){
 
 
 //= = = = = = = = = = = = = = = = = = = = = = = = = = = ~auto
-///App.auto = function(){
-///  App.pushHistory( {fn:"auto", params:[]} );
-///
-///  var STEPS = 5;
-///
-///  var canvas = App.flipper.canvas;
-///  var orgW = canvas.width;
-///  var orgH = canvas.height;
-///  for(var i=0; i<STEPS; i++){
-///    App.auto.step(orgW, orgH);
-///  }
-///
-///  if(App.auto.perfect){
-///    App.flipper.reflect("left", ~~(canvas.width/2));
-///    App.flipper.reflect("top", ~~(canvas.height/2));
-///  }
-///
-///  App.fitImage();
-///  App.updateMenu();
-///  App.setMode("none");
-///};
+
 App.auto = function(){
   trace("> > > > automated-start");
   App.pushHistory({ fn: "automated-start" });
@@ -1773,15 +1689,14 @@ App.auto.step = function(orgW, orgH){
 
 
 
-///////////////////////////////////////////////////////
 
-////////  *       *
-////////  * *   * *
-////////  *   *   *
-////////  *       *
-////////  *       *
 
-///////////////////////////////////////////////////////
+
+//   * * * *    * *    * * * *  * *   *  
+//   *  *  *   *   *      *     *  *  *  
+//   *  *  *  * * * *     *     *  *  *  
+//   *  *  *  *     *     *     *  *  *  
+//   *     *  *     *  * * * *  *   * *  
 
 //----------------------------------------------------- on load
 $(function(){
