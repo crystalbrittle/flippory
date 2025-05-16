@@ -89,6 +89,23 @@ trace.verbose = DEBUG;
 
 var DEFAULT_IMAGE = "instructions.png";
 
+function debounce(fn, delay) {
+  let timeout;
+  return function(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+function throttle(fn, delay) {
+  let lastCall = 0;
+  return function(...args) {
+    const now = Date.now();
+    if (now - lastCall >= delay) {
+      lastCall = now;
+      return fn.apply(this, args);
+    }
+  };
+}
 
 //
 //
@@ -159,16 +176,64 @@ App.rescaleAndRetry = function(prevImage){
   this.context.drawImage(prevImage, 0, 0, w, h);
 };
 // --- --- --- --- --- --- --- --- --- --- ---
+App.onLayoutChange = function(){
+  App.update();
+  App.fitImage();
+  App.updateOrientation();
+  App.updateMenuScale();
+}
+// just in case
+window.addEventListener("orientationchange", () => {
+  ///document.body.classList.add("transitioning");
+  ///setTimeout(() => document.body.classList.remove("transitioning"), 100);
+  setTimeout(() => {
+    App.onLayoutChange();
+  }, 100); 
+});
+
+App.updateOrientation = function(){
+  const isPortrait = window.innerHeight > window.innerWidth;
+  document.body.classList.toggle("portrait", isPortrait);
+  document.body.classList.toggle("landscape", !isPortrait);
+};
+
+App.updateMenuScale = function () {
+  const isLandscape = document.body.classList.contains("landscape");
+  const menu = document.getElementById("menu");
+
+  // Temporarily remove scaling to get full size
+  const originalScale = getComputedStyle(document.body).getPropertyValue("--menu-scale");
+  menu.classList.remove("menu-scaled");
+  document.body.style.removeProperty("--menu-scale");
+
+  // Use the full unscaled bounding box
+  const idealSize = isLandscape
+    ? menu.getBoundingClientRect().height
+    : menu.getBoundingClientRect().width;
+
+  const availableSize = isLandscape ? window.innerHeight : window.innerWidth;
+
+  // Compute new scale
+  const scale = Math.min(1, (availableSize - 10) / idealSize);
+
+  // Reapply scaling if needed
+  if (scale < 1) {
+    menu.classList.add("menu-scaled");
+    document.body.style.setProperty("--menu-scale", scale.toFixed(3));
+  } else {
+    menu.classList.remove("menu-scaled");
+    document.body.style.removeProperty("--menu-scale");
+  }
+};
 
 
-
-
-
-
+App.VERSION = "18.8.1";
 
 //----------------------------------------------------- 
 App.init = function(){
-  trace("= = = = = VERSION 18.8 = = = = =");
+  trace(`= = = = = VERSION ${App.VERSION} = = = = =`);
+
+  $("#version").text(`version ${App.VERSION}`);
 
   this.history = [];
   App._crop = {};
@@ -203,10 +268,13 @@ App.init = function(){
   this.flipper = new Flipper().attach( $("#content")[0] );
 
   // resize
-  $(window).on("resize", function(){
-    App.update();
-    App.fitImage();
-  });
+  $(window).on("resize", throttle(function() {
+    App.onLayoutChange();
+    // allow time for device rotate to finish
+    setTimeout(() => {
+      App.onLayoutChange();
+    }, 300);
+  }, 50));
 
   // ~ ~ ~ ~ ~ ~ overlay
   this.overlay = new Display().attach(document.body);
@@ -220,34 +288,30 @@ App.init = function(){
 
   $(window).on("pointermove", throttle( function(e){
     let event = e.originalEvent||e;
-    ///if(event.pageX != mouseX && event.pageY != mouseY){ // stutters
       mouseX = event.pageX;
       mouseY = event.pageY;
       App._onMouseMove();
       App.update();
-    ///}
   }, 10));
   $(window).on("pointerdown", App.onMouseDown.bind(this) );
   $(window).on("pointerup", App.onMouseUp.bind(this) );
 
-  
 
-  ///if(1||App.TOUCH_DEVICE){
-  ///  $(content).on("pointerup", App.onMouseUp.bind(this) );
-  ///  $(this.xLine).on("pointerup", App.onMouseUp.bind(this) );
-  ///  $(this.yLine).on("pointerup", App.onMouseUp.bind(this) );
-  ///}
+  IDB.openDB(function() {
+    IDB.load("lastImage", function(dataURL) {
+      if (dataURL) {
+        App.flipper.loadImage(dataURL, null, App._onLoad);
+      } else {
+        App.flipper.loadImage(DEFAULT_IMAGE, null, App._onLoad);
+      }
+    });
+  });
+
+  ///var lastURL = App.storage("lastURL");
+  ///if(lastURL) this.flipper.loadImage(lastURL, null, App._onLoad);
   ///else{
-  ///  $(content).on("pointerdown", App.onMouseUp.bind(this) );
-  ///  $(this.xLine).on("pointerdown", App.onMouseUp.bind(this) );
-  ///  $(this.yLine).on("pointerdown", App.onMouseUp.bind(this) );
+  ///  this.flipper.loadImage(DEFAULT_IMAGE, null, App._onLoad);
   ///}
-
-  var lastURL = App.storage("lastURL");
-  if(lastURL) this.flipper.loadImage(lastURL, null, App._onLoad);
-  else{
-    this.flipper.loadImage(DEFAULT_IMAGE, null, App._onLoad);
-  }
 
   App.setMode("left");
 
@@ -289,6 +353,7 @@ App.init = function(){
   });
   // undo
   $("#undo").on("click", function(){
+    ///App.undo(App.shiftKey);
     App.undo(App.shiftKey);
   });
   // crop
@@ -409,7 +474,8 @@ App.init = function(){
   }.bind(this));
 
   App.updateMenu();
-
+  App.updateOrientation();
+  App.updateMenuScale();
 }
 
 //----------------------------------------------------- 
@@ -424,7 +490,12 @@ App.shift = function(state){
 //----------------------------------------------------- 
 App._onLoad = function(url, callback){
   trace("* * * App._onLoad * * *");
-  App.storage("lastURL", url);
+
+  if (url.startsWith("data:")) {
+    IDB.save("lastImage", url);
+  }
+  ///App.storage("lastURL", url);
+
   App.history = [];
   App.pushHistory( {fn:"import", params:[url]} );
   App.fitImage();
@@ -546,19 +617,22 @@ App.export = function() {
 App.getAutomatedStart = function(){
   return this.history.map(h => h.fn).lastIndexOf("automated-start");
 }
+App.getAutomatedEnd = function(){
+  return this.history.map(h => h.fn).lastIndexOf("automated-end");
+}
 ///App.checkAutomated = function(shiftKey){
 ///  return this.history.lastIndexOf("automated") != -1;
 ///};
 //----------------------------------------------------- 
-App.undo = function(automated){
+App.undo = function(shiftKey){
   if (this.history.length < 2) return;
 
-  if (automated) {
+  let automatedEndIndex = App.getAutomatedEnd();
+
+  if (automatedEndIndex == this.history.length - 1) {
     // find last automated-start marker
-    const i = App.getAutomatedStart();
-    if (i > -1){
-      this.history = this.history.slice(0, i);
-    }
+    let automatedStartIndex = App.getAutomatedStart();
+    this.history = this.history.slice(0, automatedStartIndex);
     // do we still have automated history?
     if(App.getAutomatedStart() === -1) {
       App.automated = false;
@@ -683,7 +757,7 @@ App.pushHistory = function(step) {
 App.updateMenu = function(){
   var noHistory = (this.history.length<2);
   var noAuto = App.getAutomatedStart() == -1;///this.history.lastIndexOf("automated") == -1;
-  var undoDisabled = noHistory || (App.shiftKey && noAuto);
+  var undoDisabled = noHistory;/// || (App.shiftKey && noAuto);
   $("#undo").toggleClass("disabled", undoDisabled );
   $("#export").toggleClass("disabled", noHistory);
 }
@@ -1686,6 +1760,64 @@ App.auto.step = function(orgW, orgH){
   }
 };
 
+
+
+
+
+// save to indexDB for large data
+
+const IDB = {
+  db: null,
+  DB_NAME: 'FlipporyDB',
+  STORE_NAME: 'images',
+
+  openDB(callback) {
+    const request = indexedDB.open(IDB.DB_NAME, 1);
+
+    request.onupgradeneeded = function(event) {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(IDB.STORE_NAME)) {
+        db.createObjectStore(IDB.STORE_NAME);
+      }
+    };
+
+    request.onsuccess = function(event) {
+      IDB.db = event.target.result;
+      if (callback) callback();
+    };
+
+    request.onerror = function(event) {
+      console.error("IndexedDB error:", event.target.errorCode);
+    };
+  },
+
+  save(key, data, callback) {
+    const tx = IDB.db.transaction(IDB.STORE_NAME, 'readwrite');
+    const store = tx.objectStore(IDB.STORE_NAME);
+    const request = store.put(data, key);
+
+    request.onsuccess = function() {
+      if (callback) callback();
+    };
+    request.onerror = function(e) {
+      console.error("Save failed:", e);
+    };
+  },
+
+  load(key, callback) {
+    const tx = IDB.db.transaction(IDB.STORE_NAME, 'readonly');
+    const store = tx.objectStore(IDB.STORE_NAME);
+    const request = store.get(key);
+
+    request.onsuccess = function() {
+      callback(request.result);
+    };
+    request.onerror = function(e) {
+      console.error("Load failed:", e);
+      callback(null);
+    };
+  }
+};
 
 
 
