@@ -227,7 +227,7 @@ App.updateMenuScale = function () {
 };
 
 
-App.VERSION = "18.8.1";
+App.VERSION = "18.8.5";
 
 //----------------------------------------------------- 
 App.init = function(){
@@ -589,16 +589,16 @@ App.import = function(path){
 App.export = function() {
   if (App.history.length < 2) return;
 
-  App.flipper.canvas.toBlob(function(blob) {
-    if (!blob) {
-      console.error("Canvas toBlob failed.");
+  if(App.shiftKey){
+    const dataURL = App.flipper.canvas.toDataURL("image/png");
+    if (!dataURL) {
+      console.error("Canvas toDataURL failed.");
       alert("Could not export image.");
       return;
     }
 
-    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
+    a.href = dataURL;
 
     const d = (Math.round((Date.now() - 1577836800000) / 1000))
               .toString(36).toUpperCase();
@@ -609,8 +609,31 @@ App.export = function() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, "image/png");
+  }
+  else{
+    App.flipper.canvas.toBlob(function(blob) {
+      if (!blob) {
+        console.error("Canvas toBlob failed.");
+        alert("Could not export image.");
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+
+      const d = (Math.round((Date.now() - 1577836800000) / 1000))
+                .toString(36).toUpperCase();
+      const suffix = App.automated ? "a" : "";
+      const fileName = "flippory" + d + suffix + ".png";
+
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, "image/png");
+  }
 }
 
 
@@ -624,26 +647,33 @@ App.getAutomatedEnd = function(){
 ///  return this.history.lastIndexOf("automated") != -1;
 ///};
 //----------------------------------------------------- 
-App.undo = function(shiftKey){
+App.undo = function(shiftKey) {
   if (this.history.length < 2) return;
 
-  let automatedEndIndex = App.getAutomatedEnd();
-
-  if (automatedEndIndex == this.history.length - 1) {
-    // find last automated-start marker
-    let automatedStartIndex = App.getAutomatedStart();
-    this.history = this.history.slice(0, automatedStartIndex);
-    // do we still have automated history?
-    if(App.getAutomatedStart() === -1) {
-      App.automated = false;
-    }
-    $("body").toggleClass("automated", App.automated);
+  if (shiftKey) {
+    // keep only the import step
+    this.history = [this.history[0]];
+    App.automated = false;
+    $("body").removeClass("automated");
   } 
   else {
-    this.history.pop();
+    let automatedEndIndex = App.getAutomatedEnd?.();
+    // undo the automated step
+    if (automatedEndIndex === this.history.length - 1) {
+      let automatedStartIndex = App.getAutomatedStart?.();
+      if (automatedStartIndex >= 0) {
+        this.history = this.history.slice(0, automatedStartIndex);
+        App.automated = false;
+        $("body").removeClass("automated");
+      }
+    } 
+    // just undo the last step
+    else {
+      this.history.pop();
+    }
   }
 
-  // 🧹 Prune orphaned snapshots beyond current history
+  // prune orphaned snapshots
   const lastSnapshotIndex = this.history.map(h => h.fn).lastIndexOf("snapshot");
   this.history = this.history.filter((entry, index) =>
     index <= lastSnapshotIndex || entry.fn !== "snapshot"
@@ -654,9 +684,15 @@ App.undo = function(shiftKey){
 };
 
 
+
 //----------------------------------------------------- 
 App.cropMode = function(){
-  App.setMode("crop");
+  if(App.mode == "crop"){
+    App.setMode("none");
+  }
+  else{
+    App.setMode("crop");
+  }
   App.updateMenu();
 }
 //----------------------------------------------------- 
