@@ -673,7 +673,12 @@ App.undo = function(shiftKey) {
   else {
     let automatedEndIndex = App.getAutomatedEnd?.();
     // undo the automated step
-    if (automatedEndIndex === this.history.length - 1) {
+    let lastHistoryIndex = this.history.length - 1;
+    // skip any trailing snapshots
+    while (lastHistoryIndex >= 0 && this.history[lastHistoryIndex]?.fn === "snapshot") {
+      lastHistoryIndex--;
+    }
+    if (automatedEndIndex === lastHistoryIndex) {
       
       trace(`--- --- App.undoing A`);
       let automatedStartIndex = App.getAutomatedStart?.();
