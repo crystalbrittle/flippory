@@ -648,17 +648,21 @@ App.getAutomatedEnd = function(){
 ///};
 //----------------------------------------------------- 
 App.undo = function(shiftKey) {
+  trace(`--- --- App.undo... ${this.history.length}`);
   if (App.auto?.running) {
     if (App.auto.waitingUndo) return;
     App.auto.waitingUndo = true;
     App.auto.waitPromise?.then(() => {
       App.auto.waitingUndo = false;
+      trace(`--- --- RETRY undo ${this.history.length}`);
       App.undo(shiftKey);
     });
     return;
   }
 
+  trace(`--- --- App.undoing! ${this.history.length}`);
   if (this.history.length < 2) return;
+  trace(`--- --- App.undoing...! ${this.history.length}`);
 
   if (shiftKey) {
     // keep only the import step
@@ -670,8 +674,11 @@ App.undo = function(shiftKey) {
     let automatedEndIndex = App.getAutomatedEnd?.();
     // undo the automated step
     if (automatedEndIndex === this.history.length - 1) {
+      
+      trace(`--- --- App.undoing A`);
       let automatedStartIndex = App.getAutomatedStart?.();
       if (automatedStartIndex >= 0) {
+        trace(`--- --- App.undoing A1`);
         this.history = this.history.slice(0, automatedStartIndex);
         App.automated = false;
         $("body").removeClass("automated");
@@ -679,8 +686,10 @@ App.undo = function(shiftKey) {
     } 
     // just undo the last step
     else {
+      trace(`--- --- App.undoing B`);
       this.history.pop();
     }
+    trace(`--- --- App.undoing C`);
   }
 
   // prune orphaned snapshots

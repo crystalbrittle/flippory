@@ -1,0 +1,36 @@
+# These are some examples of commonly ignored file patterns.
+# You should customize this list as applicable to your project.
+# Learn more about .gitignore:
+#     https://www.atlassian.com/git/tutorials/saving-changes/gitignore
+.git/
+node_modules/
+dist/
+*.log
+*.jar
+.DS_Store
+Thumbs.db
+.directory
+
+# Applications
+*.app
+*.exe
+*.war
+
+# Large media files
+*.mp4
+*.tiff
+*.avi
+*.flv
+*.mov
+*.wmv
+
+extern/RiTa/
+edit/
+
+camera-app-master/
+
+notes/backup/notesData.txt.20*
+package-lock.json
+CURRENT_IMAGE.png
+*.DS_Store
+._*
