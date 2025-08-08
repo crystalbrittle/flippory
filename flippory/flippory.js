@@ -648,6 +648,16 @@ App.getAutomatedEnd = function(){
 ///};
 //----------------------------------------------------- 
 App.undo = function(shiftKey) {
+  if (App.auto?.running) {
+    if (App.auto.waitingUndo) return;
+    App.auto.waitingUndo = true;
+    App.auto.waitPromise?.then(() => {
+      App.auto.waitingUndo = false;
+      App.undo(shiftKey);
+    });
+    return;
+  }
+
   if (this.history.length < 2) return;
 
   if (shiftKey) {
@@ -1660,6 +1670,10 @@ App.auto = function(){
   App.automated = true;
   $("body").toggleClass("automated", App.automated);
 
+  App.auto.running = true;
+  App.auto.waitingUndo = false;
+  App.auto.waitPromise = new Promise(r => (App.auto._resolve = r));
+
   var STEPS = Math.max(3, rnd(5) + rnd(5) + rnd(5));
   var canvas = App.flipper.canvas;
   var orgW = canvas.width;
@@ -1686,6 +1700,8 @@ App.auto = function(){
   App.auto.setTimeout(function(){
     App.pushHistory({ fn: "automated-end" });
     trace("< < < < automated-end");
+    App.auto.running = false;
+    App.auto._resolve?.();
   }, t);
 };
 
