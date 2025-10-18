@@ -119,6 +119,134 @@ function throttle(fn, delay) {
 
 var App = {};
 
+App.swRegistration = null;
+App._swRegistrationInitiated = false;
+
+App.cleanupBypassParam = function() {
+  if (!('URL' in window)) return;
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('_sw-bypass')) {
+      url.searchParams.delete('_sw-bypass');
+      const search = url.searchParams.toString();
+      const newRelativePath = url.pathname + (search ? `?${search}` : '') + url.hash;
+      window.history.replaceState({}, document.title, newRelativePath);
+    }
+  } catch (error) {
+    console.warn('Unable to clean up bypass parameter', error);
+  }
+};
+
+App.registerServiceWorker = function() {
+  if (!('serviceWorker' in navigator)) {
+    return;
+  }
+
+  if (App._swRegistrationInitiated) {
+    return;
+  }
+  App._swRegistrationInitiated = true;
+
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js').then(function(registration) {
+      App.swRegistration = registration;
+
+      if (registration.waiting && navigator.serviceWorker.controller) {
+        App.onServiceWorkerUpdate(registration);
+      }
+
+      registration.addEventListener('updatefound', function() {
+        const newWorker = registration.installing;
+        if (!newWorker) return;
+
+        newWorker.addEventListener('statechange', function() {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            App.onServiceWorkerUpdate(registration);
+          }
+        });
+      });
+    }).catch(function(error) {
+      console.error('Service worker registration failed:', error);
+    });
+  });
+};
+
+App.onServiceWorkerUpdate = function(registration) {
+  App.swRegistration = registration;
+  if (!registration.waiting) return;
+
+  App.confirmForceReload('update');
+};
+
+App.reloadWithoutCache = function() {
+  const tasks = [];
+
+  if ('caches' in window) {
+    tasks.push(
+      caches.keys().then(function(keys) {
+        return Promise.all(keys.map(function(key) {
+          return caches.delete(key);
+        }));
+      }).catch(function(error) {
+        console.warn('Unable to clear caches before reload:', error);
+      })
+    );
+  }
+
+  if ('serviceWorker' in navigator) {
+    const updateRegistrations = navigator.serviceWorker.getRegistrations
+      ? navigator.serviceWorker.getRegistrations()
+      : (navigator.serviceWorker.getRegistration
+          ? navigator.serviceWorker.getRegistration().then(function(registration) {
+              return registration ? [registration] : [];
+            })
+          : Promise.resolve([]));
+
+    if (updateRegistrations) {
+      tasks.push(
+        Promise.resolve(updateRegistrations).then(function(registrations) {
+          return Promise.all(registrations.map(function(registration) {
+            if (registration.waiting) {
+              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+            return registration.update().catch(function(error) {
+              console.warn('Service worker update failed:', error);
+            });
+          }));
+        }).catch(function(error) {
+          console.warn('Unable to update service worker registrations:', error);
+        })
+      );
+    }
+  }
+
+  Promise.all(tasks).finally(function() {
+    if (!('URL' in window)) {
+      window.location.reload();
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('_sw-bypass', Date.now().toString());
+    window.location.replace(url.toString());
+  });
+};
+
+App.confirmForceReload = function(origin) {
+  const message = origin === 'update'
+    ? 'Reload now to apply the latest Flippory updates?'
+    : 'Force reload Flippory and refresh cached assets?';
+
+  if (window.confirm(message)) {
+    if (origin === 'update' && App.swRegistration && App.swRegistration.waiting) {
+      App.swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+    App.reloadWithoutCache();
+  } else if (origin === 'update') {
+    console.info('Update postponed. Use Ctrl/Cmd+Shift+R to refresh when ready.');
+  }
+};
+
 // adaptive scaling --- --- --- --- --- --- --- ---
 
 App.getMaxCanvasDimension = function(){
@@ -232,6 +360,8 @@ App.VERSION = "18.8.5";
 //----------------------------------------------------- 
 App.init = function(){
   trace(`= = = = = VERSION ${App.VERSION} = = = = =`);
+
+  App.cleanupBypassParam();
 
   $("#version").text(`version ${App.VERSION}`);
 
@@ -397,6 +527,15 @@ App.init = function(){
   // ~ ~ ~ ~ ~ ~ ~keys
 
   $(window).keydown(function(event){
+    const key = (event.key || String.fromCharCode(event.which || 0)).toLowerCase();
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && key === 'r') {
+      event.preventDefault();
+      if (!event.repeat) {
+        App.confirmForceReload('shortcut');
+      }
+      return;
+    }
+
     // can be confusing to have this toggle
     ///if(event.which==16) App.shiftKey = !App.shiftKey;
     if(event.which==16) App.shiftKey = event.shiftKey;
@@ -473,9 +612,26 @@ App.init = function(){
     }
   }.bind(this));
 
+  const applyHashState = function(hash) {
+    const value = (hash || '').replace(/^#/, '').toLowerCase();
+    if (value === 'help') {
+      $(document.body).addClass('help');
+    } else {
+      $(document.body).removeClass('help');
+    }
+    App.updateMenu();
+  };
+
+  applyHashState(window.location.hash);
+  window.addEventListener('hashchange', function() {
+    applyHashState(window.location.hash);
+  });
+
   App.updateMenu();
   App.updateOrientation();
   App.updateMenuScale();
+
+  App.registerServiceWorker();
 }
 
 //----------------------------------------------------- 

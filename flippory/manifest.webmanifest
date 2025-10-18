@@ -1,0 +1,72 @@
+{
+  "id": "./",
+  "name": "Flippory",
+  "short_name": "Flippory",
+  "description": "Flip, mirror, crop, and remix images with an offline-capable workflow.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "lang": "en",
+  "dir": "ltr",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
+  "orientation": "any",
+  "background_color": "#202020",
+  "theme_color": "#202020",
+  "categories": ["graphics", "productivity"],
+  "icons": [
+    {
+      "src": "resources/favicon/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "resources/favicon/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "resources/favicon/apple-touch-icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Resume last session",
+      "short_name": "Resume",
+      "description": "Open Flippory with your most recent image",
+      "url": "./index.html",
+      "icons": [
+        {
+          "src": "resources/favicon/apple-touch-icon-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "View instructions",
+      "short_name": "Help",
+      "description": "Show the built-in Flippory instructions",
+      "url": "./index.html#help",
+      "icons": [
+        {
+          "src": "resources/menu_help.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "resources/splashScreen.jpg",
+      "sizes": "678x404",
+      "type": "image/jpeg",
+      "label": "Image reflection workspace"
+    }
+  ],
+  "prefer_related_applications": false
+}
