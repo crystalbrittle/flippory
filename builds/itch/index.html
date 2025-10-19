@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Redirecting…</title>
+
+  <!-- 1) Tell browsers not to cache this redirect page -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma"        content="no-cache">
+  <meta http-equiv="Expires"       content="0">
+
+  <!-- 2) Fallback meta-refresh (for non-JS browsers) -->
+  <meta http-equiv="refresh" content="0;URL='https://bludgeonsoft.org/flippory'">
+  
+  <script>
+    // Build a cache-busted URL by appending a timestamp
+    const targetBase = "https://bludgeonsoft.org/flippory";
+    const cb = Date.now(); 
+    const busted = `${targetBase}?cb=${cb}`;
+
+    // 3) JS redirect (preferred)
+    window.location.replace(busted);
+  </script>
+</head>
+<body>
+  <p>
+    Redirecting to 
+    <a id="fallback" href="https://bludgeonsoft.org/flippory">bludgeonsoft.org/flippory</a>…
+  </p>
+  <script>
+    // Also update the fallback link to include the ?cb= timestamp
+    document.getElementById("fallback").href += "?cb=" + cb;
+  </script>
+</body>
+</html>
