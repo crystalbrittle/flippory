@@ -280,9 +280,30 @@ App.getMaxCanvasDimension = function(){
 App.canvasFailed = function(canvas){
   try {
     const ctx = canvas.getContext("2d");
-    const pixel = ctx.getImageData(0, 0, 1, 1).data;
+
+    if (!ctx || canvas.width === 0 || canvas.height === 0) {
+      return true;
+    }
+
+    if (!App._pixelProbeCanvas) {
+      App._pixelProbeCanvas = document.createElement("canvas");
+      App._pixelProbeCanvas.width = 1;
+      App._pixelProbeCanvas.height = 1;
+      App._pixelProbeContext = App._pixelProbeCanvas.getContext("2d");
+    }
+
+    const probeContext = App._pixelProbeContext;
+
+    if (!probeContext) {
+      return true;
+    }
+
+    probeContext.clearRect(0, 0, 1, 1);
+    probeContext.drawImage(canvas, 0, 0, 1, 1, 0, 0, 1, 1);
+
+    const pixel = probeContext.getImageData(0, 0, 1, 1).data;
     return pixel[3] === 0; // transparent = failed draw
-  } 
+  }
   catch (e) {
     return true; // error = failure
   }
