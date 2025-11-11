@@ -278,11 +278,27 @@ App.getMaxCanvasDimension = function(){
 };
 // --- --- --- --- --- --- --- --- --- --- ---
 App.canvasFailed = function(canvas){
+  if (!canvas) {
+    return true;
+  }
+
+  if (canvas.width === 0 || canvas.height === 0) {
+    return true;
+  }
+
+  if (canvas.width > App.MAX_CANVAS_WIDTH || canvas.height > App.MAX_CANVAS_HEIGHT) {
+    return true;
+  }
+
   try {
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) {
+      return true;
+    }
+
     const pixel = ctx.getImageData(0, 0, 1, 1).data;
     return pixel[3] === 0; // transparent = failed draw
-  } 
+  }
   catch (e) {
     return true; // error = failure
   }
