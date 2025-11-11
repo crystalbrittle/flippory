@@ -1,0 +1,19 @@
+RewriteEngine On
+
+# Set fallback to index.html for SPA-style routing
+DirectoryIndex index.html
+
+# Disables directory listing
+Options -Indexes
+
+# Set default expiration
+ExpiresActive On
+ExpiresDefault A1
+Header append Cache-Control must-revalidate
+
+# Allow specific domains to frame this content
+<IfModule mod_headers.c>
+  Header always unset X-Frame-Options
+  Header always set Content-Security-Policy "frame-ancestors 'self' https://bludgeonsoft.itch.io"
+</IfModule>
+
