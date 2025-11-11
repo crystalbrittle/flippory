@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v00002';
 const STATIC_CACHE = `flippory-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `flippory-runtime-${CACHE_VERSION}`;
 

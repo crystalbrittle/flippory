@@ -276,33 +276,12 @@ App.getMaxCanvasDimension = function(){
   trace(`--- --- --- --- Max canvas size: ${low}x${low}`);
   return low;
 };
-// --- --- --- --- --- --- --- --- --- --- ---
-App.canvasFailed = function(canvas){
-  try {
-    const ctx = canvas.getContext("2d");
-    const pixel = ctx.getImageData(0, 0, 1, 1).data;
-    return pixel[3] === 0; // transparent = failed draw
-  } 
-  catch (e) {
-    return true; // error = failure
-  }
-};
+
 
 App.MAX_CANVAS_WIDTH = 4096;
 App.MAX_CANVAS_HEIGHT = 4096;
 
-// --- --- --- --- --- --- --- --- --- --- ---
-App.rescaleAndRetry = function(prevImage){
-  const max = App.getMaxCanvasDimension();
-  const scale = max / Math.max(prevImage.width, prevImage.height);
-  const w = Math.floor(prevImage.width * scale);
-  const h = Math.floor(prevImage.height * scale);
 
-  const canvas = this.canvas;
-  canvas.width = w;
-  canvas.height = h;
-  this.context.drawImage(prevImage, 0, 0, w, h);
-};
 // --- --- --- --- --- --- --- --- --- --- ---
 App.onLayoutChange = function(){
   App.update();
@@ -1471,22 +1450,6 @@ Flipper.prototype.reflect = function(side, offset){
     0, 0, offsetX, offsetY,
     0, 0, refOffsetX, refOffsetY
   );
-
-  // Check for draw failure
-  if (App.canvasFailed(this.canvas)) {
-    console.warn("Canvas draw failed — rescaling and retrying...");
-    alert("Image was too large to render. Automatically scaling down.");
-
-    const max = App.getMaxCanvasDimension();
-    const scale = max / Math.max(prevImage.width, prevImage.height);
-    const retryW = Math.floor(prevImage.width * scale);
-    const retryH = Math.floor(prevImage.height * scale);
-
-    this.canvas.width = retryW;
-    this.canvas.height = retryH;
-    this.context.setTransform(1, 0, 0, 1, 0, 0);
-    this.context.drawImage(prevImage, 0, 0, retryW, retryH);
-  }
 
   return this;
 };
