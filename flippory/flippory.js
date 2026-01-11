@@ -1524,20 +1524,21 @@ Flipper.prototype.rotate = function(counterclockwise){
 
 //----------------------------------------------------- 
 Flipper.prototype.loadImage = function(fileOrURL, callback, onImageLoad){
+  var isHeic = (fileOrURL instanceof File || fileOrURL instanceof Blob) && (fileOrURL.type === "image/heic" || fileOrURL.type === "image/heif");
   $(this.image).one("load", function(url){
     onImageLoad(this.src);
   });
   $(this.image).one("error", function(){
     var message = "Could not load image.";
-    if (fileOrURL instanceof File && (fileOrURL.type === "image/heic" || fileOrURL.type === "image/heif")) {
+    if (isHeic) {
       message = "This browser does not support HEIC images.";
     }
     trace(message);
     alert(message);
   });
-  this.image.src = " ";
+  this.image.removeAttribute("src");
   if(fileOrURL instanceof File || fileOrURL instanceof Blob){
-    if (fileOrURL.type === "image/heic" || fileOrURL.type === "image/heif") {
+    if (isHeic) {
       if (window.createImageBitmap) {
         createImageBitmap(fileOrURL)
           .then(function(bitmap){
