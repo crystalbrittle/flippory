@@ -1527,16 +1527,47 @@ Flipper.prototype.loadImage = function(fileOrURL, callback, onImageLoad){
   $(this.image).one("load", function(url){
     onImageLoad(this.src);
   });
+  $(this.image).one("error", function(){
+    var message = "Could not load image.";
+    if (fileOrURL instanceof File && (fileOrURL.type === "image/heic" || fileOrURL.type === "image/heif")) {
+      message = "This browser does not support HEIC images.";
+    }
+    trace(message);
+    alert(message);
+  });
   this.image.src = " ";
-  if(typeof fileOrURL == "object"){
+  if(fileOrURL instanceof File || fileOrURL instanceof Blob){
+    if (fileOrURL.type === "image/heic" || fileOrURL.type === "image/heif") {
+      if (window.createImageBitmap) {
+        createImageBitmap(fileOrURL)
+          .then(function(bitmap){
+            var canvas = document.createElement("canvas");
+            canvas.width = bitmap.width;
+            canvas.height = bitmap.height;
+            canvas.getContext("2d").drawImage(bitmap, 0, 0);
+            var dataURL = canvas.toDataURL("image/png");
+            this.image.src = dataURL;
+            if(callback) callback(dataURL);
+          }.bind(this))
+          .catch(function(error){
+            trace(error);
+            this.image.dispatchEvent(new Event("error"));
+          }.bind(this));
+        return;
+      }
+      this.image.dispatchEvent(new Event("error"));
+      return;
+    }
     var reader = new FileReader();
     reader.onload = function(event){
       this.image.src = event.target.result;
       if(callback) callback(event.target.result);
     }.bind(this);
-    try{
-      reader.readAsDataURL(fileOrURL);
-    }catch(error){ trace(error,"error"); }
+    reader.onerror = function(event){
+      trace(event);
+      this.image.dispatchEvent(new Event("error"));
+    }.bind(this);
+    reader.readAsDataURL(fileOrURL);
   }
   else{
     this.image.src = fileOrURL;
