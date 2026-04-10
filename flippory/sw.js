@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v00002';
+const CACHE_VERSION = 'v00003';
 const STATIC_CACHE = `flippory-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `flippory-runtime-${CACHE_VERSION}`;
 
@@ -10,8 +10,11 @@ const CORE_ASSETS = [
   './external/jquery-1.8.0.min.js',
   './instructions.png',
   './resources/backgroundTexture.png',
-  './resources/splashScreen.jpg',
-  './resources/favicon/favicon.svg'
+  './resources/splashscreen.png',
+  './resources/favicon/favicon-96.png',
+  './resources/favicon/web-app-manifest-192x192.png',
+  './resources/favicon/web-app-manifest-512x512.png',
+  './resources/favicon/apple-touch-icon-180.png'
 ];
 
 const CORE_PATHS = new Set(
