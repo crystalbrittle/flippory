@@ -25,11 +25,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
-    },
-    {
-      "src": "resources/favicon/apple-touch-icon-180.png",
-      "sizes": "180x180",
-      "type": "image/png"
     }
   ],
   "shortcuts": [
@@ -62,9 +57,9 @@
   ],
   "screenshots": [
     {
-      "src": "resources/splashScreen.jpg",
-      "sizes": "678x404",
-      "type": "image/jpeg",
+      "src": "resources/splashscreen.png",
+      "sizes": "1090x650",
+      "type": "image/png",
       "label": "Image reflection workspace"
     }
   ],
