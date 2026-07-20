@@ -451,6 +451,37 @@ App.init = function(){
   $("#import").on("click", function(){
     App.showImport();
   });
+  $("#import").on("contextmenu", function(e){
+    e.preventDefault();
+    $("#urlModal").fadeIn(150);
+    $("#urlModalInput").val("").focus();
+  });
+
+  $("#urlModalBtn").on("click", function(){
+    var url = $("#urlModalInput").val();
+    if(url) {
+      $("#urlModal").fadeOut(150);
+      App.import(url);
+    }
+  });
+
+  $("#urlModalInput").on("keydown", function(e){
+    if(e.key === "Enter") {
+      var url = $(this).val();
+      if(url) {
+        $("#urlModal").fadeOut(150);
+        App.import(url);
+      }
+    } else if (e.key === "Escape") {
+      $("#urlModal").fadeOut(150);
+    }
+  });
+
+  $(document).on("pointerdown", function(e){
+    if($("#urlModal").is(":visible") && !$(e.target).closest("#urlModal").length && !$(e.target).closest("#import").length) {
+      $("#urlModal").fadeOut(150);
+    }
+  });
   // load
   $("#load").on("click", function(){
     var value = $("#importui > input")[0].value;
@@ -1573,11 +1604,47 @@ Flipper.prototype.loadImage = function(fileOrURL, callback, onImageLoad){
   else{
     if (typeof fileOrURL === 'string' && fileOrURL.match(/^https?:\/\//i)) {
       this.image.crossOrigin = "anonymous";
-      this.image.src = "proxy.php?url=" + encodeURIComponent(fileOrURL);
+      var proxyUrl = "proxy.php?url=" + encodeURIComponent(fileOrURL);
+      var sizeUrl = "proxy.php?action=size&url=" + encodeURIComponent(fileOrURL);
+      
+      var img = this.image;
+      
+      fetch(sizeUrl)
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+          if (data.error) {
+            alert("There was an issue loading that image, try downloading it first.");
+            return;
+          }
+          var size = data.size;
+          if (size !== null) {
+            if (size > 15 * 1024 * 1024) {
+              alert("That image is too large to import remotely, download it first.");
+              return;
+            }
+            if (size > 5 * 1024 * 1024) {
+              if (!confirm("Are you sure you want to import this large image?")) {
+                return;
+              }
+            }
+          }
+          
+          // Override default error handler for proxy loads
+          $(img).off("error").one("error", function(){
+            alert("There was an issue loading that image, try downloading it first.");
+          });
+          
+          img.src = proxyUrl;
+          if(callback) callback(fileOrURL);
+        })
+        .catch(function(err) {
+          alert("There was an issue loading that image, try downloading it first.");
+        });
+        
     } else {
       this.image.src = fileOrURL;
+      if(callback) callback(fileOrURL);
     }
-    if(callback) callback(fileOrURL);
   }
 }
 //----------------------------------------------------- 

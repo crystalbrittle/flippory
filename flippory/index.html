@@ -78,6 +78,14 @@ You can <b>Undo</b> (<i>Z</i>) individual steps, or use <b>Shift</b> to undo a w
   <div id="trace"></div>
 
   <div id="debug1"></div><div id="debug2"></div>
+  
+  <div id="urlModal" style="display:none; position:fixed; z-index:9999; left:50%; top:50%; transform:translate(-50%, -50%); background:rgba(40,40,40,0.95); border:1px solid #555; padding:20px; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.8); color:white; font-family:sans-serif;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span>URL</span>
+      <input type="text" id="urlModalInput" style="padding:8px; width:300px; background:#222; border:1px solid #444; color:white; border-radius:4px; outline:none;" placeholder="https://..." />
+      <button id="urlModalBtn" style="padding:8px 12px; background:#fff555; border:none; color:black; font-weight:bold; border-radius:4px; cursor:pointer;">+</button>
+    </div>
+  </div>
 </body>
 
 <!-- #
