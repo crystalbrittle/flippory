@@ -1571,7 +1571,12 @@ Flipper.prototype.loadImage = function(fileOrURL, callback, onImageLoad){
     reader.readAsDataURL(fileOrURL);
   }
   else{
-    this.image.src = fileOrURL;
+    if (typeof fileOrURL === 'string' && fileOrURL.match(/^https?:\/\//i)) {
+      this.image.crossOrigin = "anonymous";
+      this.image.src = "proxy.php?url=" + encodeURIComponent(fileOrURL);
+    } else {
+      this.image.src = fileOrURL;
+    }
     if(callback) callback(fileOrURL);
   }
 }
